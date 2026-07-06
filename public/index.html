@@ -339,7 +339,7 @@
         <div class="arrow">›</div>
         <div class="tag">추천</div>
       </div>
-      <div class="menu-card" onclick="alert('준비 중입니다')">
+      <div class="menu-card" onclick="goToChapterStart()">
         <div class="icon">📖</div>
         <div class="info"><h3>단원별 연습</h3><p>과목을 선택해 집중 학습</p></div>
         <div class="arrow">›</div>
@@ -381,7 +381,41 @@
             <div class="count-btn"          data-count="60"  onclick="selectCount(this)">60문제</div>
           </div>
         </div>
-        <button class="btn-start" onclick="startExam()">시험 시작하기 →</button>
+        <button class="btn-start" onclick="startMockExam()">시험 시작하기 →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 단원별 연습 설정 -->
+  <div class="screen" id="screen-chapter-start">
+    <div class="start-screen">
+      <div class="start-top">
+        <div class="back-btn" onclick="goTo('screen-home')">←</div>
+        <h2>단원별 연습</h2>
+        <p>과목 하나를 선택해 집중 학습하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="error-area-ch"></div>
+        <div class="setting-section">
+          <h4>출제 과목 (택 1)</h4>
+          <div class="subject-grid">
+            <div class="subject-btn" data-subject="기초조리실무" onclick="selectSubjectSingle(this)">기초조리실무</div>
+            <div class="subject-btn" data-subject="위생관리"     onclick="selectSubjectSingle(this)">위생관리</div>
+            <div class="subject-btn" data-subject="재료관리"     onclick="selectSubjectSingle(this)">재료관리</div>
+            <div class="subject-btn" data-subject="구매관리"     onclick="selectSubjectSingle(this)">구매관리</div>
+            <div class="subject-btn" data-subject="한식조리실무" onclick="selectSubjectSingle(this)">한식조리실무</div>
+            <div class="subject-btn" data-subject="안전관리"     onclick="selectSubjectSingle(this)">안전관리</div>
+          </div>
+        </div>
+        <div class="setting-section">
+          <h4>문항 수</h4>
+          <div class="count-row">
+            <div class="count-btn selected" data-count="10"   onclick="selectCount(this)">10문제</div>
+            <div class="count-btn"          data-count="20"   onclick="selectCount(this)">20문제</div>
+            <div class="count-btn"          data-count="9999" onclick="selectCount(this)">전체</div>
+          </div>
+        </div>
+        <button class="btn-start" onclick="startChapterExam()">시험 시작하기 →</button>
       </div>
     </div>
   </div>
@@ -437,7 +471,7 @@
         </div>
       </div>
       <div class="result-actions">
-        <button class="btn-retry" onclick="goTo('screen-start')">다시 풀기</button>
+        <button class="btn-retry" onclick="goTo(examMode === 'chapter' ? 'screen-chapter-start' : 'screen-start')">다시 풀기</button>
         <button class="btn-home"  onclick="goTo('screen-home')">홈으로</button>
       </div>
     </div>
@@ -464,6 +498,7 @@ const DIFF_COLOR = {'하':'#22C55E','중':'#EAB308','상':'#EF4444'};
 let QUESTIONS = [], answers = [], revealed = [];
 let selectedSubjects = [], selectedCount = 10;
 let currentQ = 0, timerSec = 600, timerInt = null;
+let examMode = 'mock'; // 'mock' | 'chapter'
 
 /* ── 화면 ── */
 function goTo(id) {
@@ -474,12 +509,41 @@ function goTo(id) {
 /* ── 설정 ── */
 function toggleSubject(el) {
   el.classList.toggle('selected');
-  selectedSubjects = [...document.querySelectorAll('.subject-btn.selected')].map(b => b.dataset.subject);
+  selectedSubjects = [...document.querySelectorAll('#screen-start .subject-btn.selected')].map(b => b.dataset.subject);
+}
+function selectSubjectSingle(el) {
+  document.querySelectorAll('#screen-chapter-start .subject-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedSubjects = [el.dataset.subject];
 }
 function selectCount(el) {
-  document.querySelectorAll('.count-btn').forEach(b => b.classList.remove('selected'));
+  el.parentElement.querySelectorAll('.count-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
   selectedCount = parseInt(el.dataset.count);
+}
+
+/* ── 단원별 연습 진입/시작 ── */
+function goToChapterStart() {
+  selectedSubjects = [];
+  document.querySelectorAll('#screen-chapter-start .subject-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#screen-chapter-start .count-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('#screen-chapter-start .count-btn[data-count="10"]').classList.add('selected');
+  selectedCount = 10;
+  document.getElementById('error-area-ch').innerHTML = '';
+  goTo('screen-chapter-start');
+}
+async function startMockExam() {
+  examMode = 'mock';
+  await startExam();
+}
+async function startChapterExam() {
+  if (selectedSubjects.length === 0) {
+    document.getElementById('error-area-ch').innerHTML =
+      `<div class="error-box">⚠️ 과목을 선택해주세요.</div>`;
+    return;
+  }
+  examMode = 'chapter';
+  await startExam();
 }
 
 /* ── 문제 fetch (Vercel API 경유) ── */
@@ -551,7 +615,7 @@ async function startExam() {
     answers  = new Array(QUESTIONS.length).fill(null);
     revealed = new Array(QUESTIONS.length).fill(false);
     currentQ = 0;
-    timerSec = selectedCount >= 60 ? 3600 : selectedCount * 60;
+    timerSec = QUESTIONS.length >= 60 ? 3600 : QUESTIONS.length * 60;
 
     document.getElementById('total-count').textContent = QUESTIONS.length;
     clearInterval(timerInt);
@@ -560,9 +624,13 @@ async function startExam() {
     renderQ();
     goTo('screen-exam');
   } catch(e) {
-    goTo('screen-start');
-    document.getElementById('error-area').innerHTML =
-      `<div class="error-box">⚠️ ${e.message}</div>`;
+    if (examMode === 'chapter') {
+      goTo('screen-chapter-start');
+      document.getElementById('error-area-ch').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
+    } else {
+      goTo('screen-start');
+      document.getElementById('error-area').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
+    }
   }
 }
 
