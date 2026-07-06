@@ -344,7 +344,7 @@
         <div class="info"><h3>단원별 연습</h3><p>과목을 선택해 집중 학습</p></div>
         <div class="arrow">›</div>
       </div>
-      <div class="menu-card" onclick="alert('준비 중입니다')">
+      <div class="menu-card" onclick="goToWrongNote()">
         <div class="icon">📋</div>
         <div class="info"><h3>오답노트</h3><p>틀린 문제만 모아서 복습</p></div>
         <div class="arrow">›</div>
@@ -420,6 +420,20 @@
     </div>
   </div>
 
+  <!-- 오답노트 -->
+  <div class="screen" id="screen-wrong-note">
+    <div class="start-screen">
+      <div class="start-top">
+        <div class="back-btn" onclick="goTo('screen-home')">←</div>
+        <h2>오답노트</h2>
+        <p>틀린 문제만 모아서 복습하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="wrong-note-body"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 로딩 -->
   <div class="screen" id="screen-loading">
     <div class="loading-screen">
@@ -471,7 +485,7 @@
         </div>
       </div>
       <div class="result-actions">
-        <button class="btn-retry" onclick="goTo(examMode === 'chapter' ? 'screen-chapter-start' : 'screen-start')">다시 풀기</button>
+        <button class="btn-retry" onclick="retryFromResult()">다시 풀기</button>
         <button class="btn-home"  onclick="goTo('screen-home')">홈으로</button>
       </div>
     </div>
@@ -498,7 +512,24 @@ const DIFF_COLOR = {'하':'#22C55E','중':'#EAB308','상':'#EF4444'};
 let QUESTIONS = [], answers = [], revealed = [];
 let selectedSubjects = [], selectedCount = 10;
 let currentQ = 0, timerSec = 600, timerInt = null;
-let examMode = 'mock'; // 'mock' | 'chapter'
+let examMode = 'mock'; // 'mock' | 'chapter' | 'review'
+
+/* ── 오답노트 저장소 (localStorage) ── */
+const WRONG_NOTES_KEY = 'wrongNotes';
+function getWrongNotes() {
+  try { return JSON.parse(localStorage.getItem(WRONG_NOTES_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function saveWrongNote(q) {
+  const notes = getWrongNotes();
+  notes[q.id] = q;
+  localStorage.setItem(WRONG_NOTES_KEY, JSON.stringify(notes));
+}
+function removeWrongNote(id) {
+  const notes = getWrongNotes();
+  delete notes[id];
+  localStorage.setItem(WRONG_NOTES_KEY, JSON.stringify(notes));
+}
 
 /* ── 화면 ── */
 function goTo(id) {
@@ -546,6 +577,53 @@ async function startChapterExam() {
   await startExam();
 }
 
+/* ── 오답노트 진입/복습 시작 ── */
+function goToWrongNote() {
+  renderWrongNoteList();
+  goTo('screen-wrong-note');
+}
+function renderWrongNoteList() {
+  const notes = Object.values(getWrongNotes());
+  const body = document.getElementById('wrong-note-body');
+  if (notes.length === 0) {
+    body.innerHTML = `<div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">아직 틀린 문제가 없습니다.</div>`;
+    return;
+  }
+  const items = notes.map(n => {
+    const c = SUBJ_COLOR[n.subject] || '#6B7280';
+    return `<div class="detail-card">
+      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${n.subject}</div>
+      <div style="font-size:13px;font-weight:500;line-height:1.5">${n.q}</div>
+    </div>`;
+  }).join('');
+  body.innerHTML = `
+    <div class="setting-section">
+      <h4>틀린 문제 (${notes.length}개)</h4>
+      <div style="display:flex;flex-direction:column;gap:10px">${items}</div>
+    </div>
+    <button class="btn-start" onclick="startWrongReview()">복습 시작하기 →</button>
+  `;
+}
+function startWrongReview() {
+  const notes = Object.values(getWrongNotes());
+  if (notes.length === 0) return;
+  examMode = 'review';
+  QUESTIONS = shuffle(notes);
+  answers  = new Array(QUESTIONS.length).fill(null);
+  revealed = new Array(QUESTIONS.length).fill(false);
+  currentQ = 0;
+  clearInterval(timerInt);
+  document.getElementById('timer').style.display = 'none';
+  document.getElementById('total-count').textContent = QUESTIONS.length;
+  renderQ();
+  goTo('screen-exam');
+}
+function retryFromResult() {
+  if (examMode === 'chapter') goTo('screen-chapter-start');
+  else if (examMode === 'review') { renderWrongNoteList(); goTo('screen-wrong-note'); }
+  else goTo('screen-start');
+}
+
 /* ── 문제 fetch (Vercel API 경유) ── */
 async function fetchAllQuestions() {
   let all = [], hasMore = true, cursor;
@@ -585,6 +663,7 @@ function parsePage(page) {
   const o3  = get(p['보기3']), o4 = get(p['보기4']);
   if (!q || !o1 || !o2) return null;
   return {
+    id: page.id,
     subject: get(p['과목']), chapter: get(p['챕터']),
     difficulty: get(p['난이도']), q,
     opts: [o1, o2, o3, o4].filter(Boolean),
@@ -618,6 +697,7 @@ async function startExam() {
     timerSec = QUESTIONS.length >= 60 ? 3600 : QUESTIONS.length * 60;
 
     document.getElementById('total-count').textContent = QUESTIONS.length;
+    document.getElementById('timer').style.display = '';
     clearInterval(timerInt);
     timerInt = setInterval(tickTimer, 1000);
     updateTimer();
@@ -735,24 +815,40 @@ function finishExam() {
   clearInterval(timerInt);
   let correct = 0;
   const subjMap = {};
+  const isReview = examMode === 'review';
   QUESTIONS.forEach((q,i) => {
     if (!subjMap[q.subject]) subjMap[q.subject] = {ok:0, total:0};
     subjMap[q.subject].total++;
-    if (answers[i] === q.answer) { correct++; subjMap[q.subject].ok++; }
+    const answered = answers[i] !== null;
+    const isCorrect = answered && answers[i] === q.answer;
+    if (isCorrect) { correct++; subjMap[q.subject].ok++; }
+
+    if (isReview) {
+      if (isCorrect) removeWrongNote(q.id);
+    } else if (answered && !isCorrect) {
+      saveWrongNote(q);
+    }
   });
 
   const score = Math.round(correct/QUESTIONS.length*100);
   const pass  = score >= 60;
 
-  document.getElementById('result-emoji').textContent    = pass ? '🎉' : '😔';
-  document.getElementById('result-title').textContent    = pass ? '합격을 축하합니다!' : '아쉽지만 불합격입니다';
-  document.getElementById('result-subtitle').textContent = pass ? '실력을 더 단단히 다져보세요!' : '오답을 중심으로 다시 도전해보세요!';
+  document.getElementById('result-emoji').textContent = isReview ? '📚' : (pass ? '🎉' : '😔');
+  document.getElementById('result-title').textContent = isReview
+    ? '복습 완료!'
+    : (pass ? '합격을 축하합니다!' : '아쉽지만 불합격입니다');
+  document.getElementById('result-subtitle').textContent = isReview
+    ? `${correct}문제를 다시 맞혔어요`
+    : (pass ? '실력을 더 단단히 다져보세요!' : '오답을 중심으로 다시 도전해보세요!');
   document.getElementById('score-ring').className = `score-ring ${pass?'pass':'fail'}`;
   document.getElementById('score-num').textContent = score;
   document.getElementById('score-detail').textContent = `${correct}문제 정답 / 전체 ${QUESTIONS.length}문제`;
   const badge = document.getElementById('pass-badge');
-  badge.textContent = pass ? '✓ 합격' : '✗ 불합격';
-  badge.className = `pass-badge ${pass?'pass':'fail'}`;
+  badge.style.display = isReview ? 'none' : '';
+  if (!isReview) {
+    badge.textContent = pass ? '✓ 합격' : '✗ 불합격';
+    badge.className = `pass-badge ${pass?'pass':'fail'}`;
+  }
 
   document.getElementById('subject-bars').innerHTML = Object.entries(subjMap).map(([sub,d])=>{
     const pct = Math.round(d.ok/d.total*100);
