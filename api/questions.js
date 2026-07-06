@@ -1,17 +1,20 @@
-const DB_ID = process.env.NOTION_DB_ID;
-const NOTION_KEY = process.env.NOTION_KEY;
-
 export default async function handler(req, res) {
-  // CORS 헤더
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
+  const NOTION_KEY = process.env.NOTION_KEY;
+  const DB_ID = process.env.NOTION_DB_ID;
+
+  if (!NOTION_KEY || !DB_ID) {
+    return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
+  }
+
   const { subjects, cursor } = req.body || {};
 
-  // 필터 구성
   let filterBody = {};
   if (subjects && subjects.length > 0) {
     filterBody = {
@@ -38,12 +41,12 @@ export default async function handler(req, res) {
       }
     );
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const err = await response.json();
-      return res.status(response.status).json({ error: err.message || 'Notion API 오류' });
+      return res.status(response.status).json({ error: data.message || 'Notion API 오류' });
     }
 
-    const data = await response.json();
     return res.status(200).json(data);
 
   } catch (e) {
