@@ -249,6 +249,7 @@
   .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
   .nav-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); flex: 2; }
   .nav-btn:active:not(:disabled) { transform: scale(.97); }
+  .nav-flag-btn { flex: 0 0 46px; padding: 14px 0; font-size: 16px; color: var(--accent); border-color: var(--accent); }
 
   /* ── 문제 패널 ── */
   .nav-panel {
@@ -470,6 +471,7 @@
     </div>
     <div class="exam-body" id="exam-body"></div>
     <div class="exam-nav">
+      <button class="nav-btn nav-flag-btn" id="btn-flag-jump" onclick="jumpToFlagged()" title="체크한 문제로 이동">🚩</button>
       <button class="nav-btn" id="btn-prev" onclick="prevQ()">‹ 이전</button>
       <button class="nav-btn primary" id="btn-next" onclick="nextQ()">다음 ›</button>
     </div>
@@ -757,6 +759,7 @@ function renderQ() {
   document.getElementById('progress-fill').style.width = ((currentQ+1)/total*100) + '%';
   document.getElementById('progress-label').textContent = `${currentQ+1} / ${total}`;
   document.getElementById('btn-prev').disabled = currentQ === 0;
+  document.getElementById('btn-flag-jump').disabled = !flagged.some(Boolean);
 
   const btnNext = document.getElementById('btn-next');
   if (currentQ === total-1) {
@@ -808,6 +811,13 @@ function renderQ() {
 function selectOpt(i) { if (!revealed[currentQ]) { answers[currentQ]=i; renderQ(); } }
 function revealAnswer() { revealed[currentQ]=true; renderQ(); }
 function toggleFlag() { flagged[currentQ] = !flagged[currentQ]; renderQ(); }
+function jumpToFlagged() {
+  const total = QUESTIONS.length;
+  for (let step = 1; step <= total; step++) {
+    const idx = (currentQ + step) % total;
+    if (flagged[idx]) { currentQ = idx; renderQ(); return; }
+  }
+}
 function prevQ() { if (currentQ>0) { currentQ--; renderQ(); } }
 function nextQ() { if (currentQ<QUESTIONS.length-1) { currentQ++; renderQ(); } }
 function confirmSubmit() {
