@@ -104,7 +104,6 @@
   /* ── 설정 ── */
   .start-screen { background: var(--primary); flex: 1; display: flex; flex-direction: column; }
   .start-top { padding: 52px 24px 32px; color: #fff; }
-  .start-top .back-btn { font-size: 22px; cursor: pointer; margin-bottom: 20px; display: inline-block; }
   .start-top h2 { font-size: 24px; font-weight: 700; }
   .start-top p  { opacity: .7; font-size: 13px; margin-top: 6px; }
   .start-body { background: var(--bg); border-radius: 28px 28px 0 0; flex: 1; padding: 28px 20px; overflow-y: auto; }
@@ -129,11 +128,19 @@
   }
   .count-btn.selected { border-color: var(--primary); color: var(--primary); background: var(--opt-sel); }
 
+  .bottom-actions { display: flex; gap: 10px; margin-top: 8px; }
+  .btn-back {
+    flex: 0 0 54px; padding: 18px 0; border: 2px solid var(--border); border-radius: 16px;
+    background: var(--card); color: var(--text);
+    font-size: 18px; font-weight: 700; font-family: inherit;
+    cursor: pointer;
+  }
+  .bottom-actions .btn-back:only-child { flex: 1; }
   .btn-start {
-    width: 100%; padding: 18px; border: none; border-radius: 16px;
+    flex: 1; padding: 18px; border: none; border-radius: 16px;
     background: var(--primary); color: #fff;
     font-size: 16px; font-weight: 700; font-family: inherit;
-    cursor: pointer; margin-top: 8px;
+    cursor: pointer;
   }
 
   /* ── 로딩 ── */
@@ -370,7 +377,6 @@
   <div class="screen" id="screen-start">
     <div class="start-screen">
       <div class="start-top">
-        <div class="back-btn" onclick="goTo('screen-home')">←</div>
         <h2>CBT 모의고사</h2>
         <p>출제 과목과 문항 수를 선택하세요</p>
       </div>
@@ -395,7 +401,10 @@
             <div class="count-btn"          data-count="60"  onclick="selectCount(this)">60문제</div>
           </div>
         </div>
-        <button class="btn-start" onclick="startMockExam()">시험 시작하기 →</button>
+        <div class="bottom-actions">
+          <button class="btn-back" onclick="goTo('screen-home')">←</button>
+          <button class="btn-start" onclick="startMockExam()">시험 시작하기 →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -404,7 +413,6 @@
   <div class="screen" id="screen-chapter-start">
     <div class="start-screen">
       <div class="start-top">
-        <div class="back-btn" onclick="goTo('screen-home')">←</div>
         <h2>단원별 연습</h2>
         <p>과목 하나를 선택해 집중 학습하세요</p>
       </div>
@@ -429,7 +437,10 @@
             <div class="count-btn"          data-count="9999" onclick="selectCount(this)">전체</div>
           </div>
         </div>
-        <button class="btn-start" onclick="startChapterExam()">시험 시작하기 →</button>
+        <div class="bottom-actions">
+          <button class="btn-back" onclick="goTo('screen-home')">←</button>
+          <button class="btn-start" onclick="startChapterExam()">시험 시작하기 →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -438,7 +449,6 @@
   <div class="screen" id="screen-wrong-note">
     <div class="start-screen">
       <div class="start-top">
-        <div class="back-btn" onclick="goTo('screen-home')">←</div>
         <h2>오답노트</h2>
         <p>틀린 문제만 모아서 복습하세요</p>
       </div>
@@ -601,7 +611,12 @@ function renderWrongNoteList() {
   const notes = Object.values(getWrongNotes());
   const body = document.getElementById('wrong-note-body');
   if (notes.length === 0) {
-    body.innerHTML = `<div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">아직 틀린 문제가 없습니다.</div>`;
+    body.innerHTML = `
+      <div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">아직 틀린 문제가 없습니다.</div>
+      <div class="bottom-actions">
+        <button class="btn-back" onclick="goTo('screen-home')">←</button>
+      </div>
+    `;
     return;
   }
   const items = notes.map(n => {
@@ -616,7 +631,10 @@ function renderWrongNoteList() {
       <h4>틀린 문제 (${notes.length}개)</h4>
       <div style="display:flex;flex-direction:column;gap:10px">${items}</div>
     </div>
-    <button class="btn-start" onclick="startWrongReview()">복습 시작하기 →</button>
+    <div class="bottom-actions">
+      <button class="btn-back" onclick="goTo('screen-home')">←</button>
+      <button class="btn-start" onclick="startWrongReview()">복습 시작하기 →</button>
+    </div>
   `;
 }
 function startWrongReview() {
