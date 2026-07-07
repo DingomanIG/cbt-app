@@ -822,10 +822,14 @@ function prevQ() { if (currentQ>0) { currentQ--; renderQ(); } }
 function nextQ() { if (currentQ<QUESTIONS.length-1) { currentQ++; renderQ(); } }
 function confirmSubmit() {
   const flaggedCount = flagged.filter(Boolean).length;
-  const msg = flaggedCount > 0
-    ? `체크한 문제가 ${flaggedCount}개 있습니다. 그래도 제출하시겠습니까?`
-    : '시험을 제출하시겠습니까?';
-  if (confirm(msg)) finishExam();
+  if (flaggedCount > 0) {
+    if (!confirm(`체크한 문제가 ${flaggedCount}개 있습니다. 계속 진행하시겠습니까?`)) return;
+  }
+  const unansweredCount = answers.filter(a => a === null).length;
+  if (unansweredCount > 0) {
+    if (!confirm(`답안을 작성하지 않은 문제가 ${unansweredCount}개 있습니다. 계속 진행하시겠습니까?`)) return;
+  }
+  if (confirm('제출할까요?')) finishExam();
 }
 function confirmExit() { if(confirm('시험을 종료하시겠습니까?')) { clearInterval(timerInt); goTo('screen-home'); } }
 
