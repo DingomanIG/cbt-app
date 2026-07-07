@@ -226,6 +226,13 @@
     font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
   }
 
+  .flag-btn {
+    margin-left: auto; font-size: 11px; font-weight: 600; color: var(--text-sub);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 3px 9px; cursor: pointer; flex-shrink: 0;
+  }
+  .flag-btn.active { background: var(--accent-lt); color: #B8830A; border-color: var(--accent); }
+
   .exam-nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 390px;
@@ -257,6 +264,7 @@
   .nav-panel h4 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
   .q-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
   .q-dot {
+    position: relative;
     aspect-ratio: 1; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 700; cursor: pointer;
@@ -265,6 +273,11 @@
   }
   .q-dot.answered { background: #E6F4EE; color: var(--primary); border-color: var(--primary); }
   .q-dot.current  { background: var(--primary); color: #fff; }
+  .q-dot.flagged::after {
+    content: ''; position: absolute; top: -3px; right: -3px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); border: 1px solid #fff;
+  }
   .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; display: none; }
   .overlay.show { display: block; }
 
@@ -509,7 +522,7 @@ const SUBJ_COLOR = {
 const DIFF_COLOR = {'하':'#22C55E','중':'#EAB308','상':'#EF4444'};
 
 /* ── 상태 ── */
-let QUESTIONS = [], answers = [], revealed = [];
+let QUESTIONS = [], answers = [], revealed = [], flagged = [];
 let selectedSubjects = [], selectedCount = 10;
 let currentQ = 0, timerSec = 600, timerInt = null;
 let examMode = 'mock'; // 'mock' | 'chapter' | 'review'
@@ -608,9 +621,10 @@ function startWrongReview() {
   const notes = Object.values(getWrongNotes());
   if (notes.length === 0) return;
   examMode = 'review';
-  QUESTIONS = shuffle(notes);
+  QUESTIONS = shuffle(notes).map(shuffleOptions);
   answers  = new Array(QUESTIONS.length).fill(null);
   revealed = new Array(QUESTIONS.length).fill(false);
+  flagged  = new Array(QUESTIONS.length).fill(false);
   currentQ = 0;
   clearInterval(timerInt);
   document.getElementById('timer').style.display = 'none';
@@ -681,6 +695,11 @@ function shuffle(arr) {
   return a;
 }
 
+function shuffleOptions(q) {
+  const order = shuffle(q.opts.map((_, i) => i));
+  return { ...q, opts: order.map(i => q.opts[i]), answer: order.indexOf(q.answer) };
+}
+
 /* ── 시험 시작 ── */
 async function startExam() {
   document.getElementById('error-area').innerHTML = '';
@@ -690,9 +709,10 @@ async function startExam() {
     const parsed = pages.map(parsePage).filter(Boolean);
     if (parsed.length === 0) throw new Error('문제가 없습니다. 과목 선택을 확인해주세요.');
 
-    QUESTIONS = shuffle(parsed).slice(0, selectedCount);
+    QUESTIONS = shuffle(parsed).slice(0, selectedCount).map(shuffleOptions);
     answers  = new Array(QUESTIONS.length).fill(null);
     revealed = new Array(QUESTIONS.length).fill(false);
+    flagged  = new Array(QUESTIONS.length).fill(false);
     currentQ = 0;
     timerSec = QUESTIONS.length >= 60 ? 3600 : QUESTIONS.length * 60;
 
@@ -741,7 +761,7 @@ function renderQ() {
   const btnNext = document.getElementById('btn-next');
   if (currentQ === total-1) {
     btnNext.textContent = '제출하기 ✓';
-    btnNext.onclick = () => { if (confirm('시험을 제출하시겠습니까?')) finishExam(); };
+    btnNext.onclick = confirmSubmit;
   } else {
     btnNext.textContent = '다음 ›';
     btnNext.onclick = nextQ;
@@ -771,6 +791,7 @@ function renderQ() {
         <div class="q-num">${currentQ+1}</div>
         <div class="q-subject" style="color:${sc};background:${sc}18">${q.subject}</div>
         <div class="q-diff" style="color:${dc}">난이도 ${q.difficulty}</div>
+        <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()">${flagged[currentQ] ? '🚩 체크됨' : '🏳️ 체크'}</div>
       </div>
       <div class="question-text">${q.q}</div>
     </div>
@@ -786,8 +807,16 @@ function renderQ() {
 
 function selectOpt(i) { if (!revealed[currentQ]) { answers[currentQ]=i; renderQ(); } }
 function revealAnswer() { revealed[currentQ]=true; renderQ(); }
+function toggleFlag() { flagged[currentQ] = !flagged[currentQ]; renderQ(); }
 function prevQ() { if (currentQ>0) { currentQ--; renderQ(); } }
 function nextQ() { if (currentQ<QUESTIONS.length-1) { currentQ++; renderQ(); } }
+function confirmSubmit() {
+  const flaggedCount = flagged.filter(Boolean).length;
+  const msg = flaggedCount > 0
+    ? `체크한 문제가 ${flaggedCount}개 있습니다. 그래도 제출하시겠습니까?`
+    : '시험을 제출하시겠습니까?';
+  if (confirm(msg)) finishExam();
+}
 function confirmExit() { if(confirm('시험을 종료하시겠습니까?')) { clearInterval(timerInt); goTo('screen-home'); } }
 
 /* ── 문제 패널 ── */
@@ -805,6 +834,7 @@ function updateNavPanel() {
     let cls='q-dot';
     if (i===currentQ) cls+=' current';
     else if (answers[i]!==null) cls+=' answered';
+    if (flagged[i]) cls+=' flagged';
     return `<div class="${cls}" onclick="jumpTo(${i})">${i+1}</div>`;
   }).join('');
 }
