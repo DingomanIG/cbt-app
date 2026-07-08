@@ -168,9 +168,10 @@
   .timer.warning { background: rgba(245,166,35,.4); }
   .q-strip {
     display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px;
-    scrollbar-width: none;
+    scrollbar-width: none; cursor: grab;
   }
   .q-strip::-webkit-scrollbar { display: none; }
+  .q-strip.dragging { cursor: grabbing; user-select: none; }
   .q-chip {
     position: relative; flex: 0 0 32px; height: 32px; border-radius: 8px;
     display: flex; align-items: center; justify-content: center;
@@ -906,6 +907,31 @@ function finishExam() {
 
   goTo('screen-result');
 }
+
+/* ── 문제 번호 바 마우스 드래그 스크롤 ── */
+(function() {
+  const strip = document.getElementById('q-strip');
+  let isDown = false, moved = false, startX = 0, startScroll = 0;
+  strip.addEventListener('mousedown', (e) => {
+    isDown = true; moved = false;
+    startX = e.clientX;
+    startScroll = strip.scrollLeft;
+    strip.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!isDown) return;
+    const dx = e.clientX - startX;
+    if (Math.abs(dx) > 5) moved = true;
+    strip.scrollLeft = startScroll - dx;
+  });
+  window.addEventListener('mouseup', () => {
+    isDown = false;
+    strip.classList.remove('dragging');
+  });
+  strip.addEventListener('click', (e) => {
+    if (moved) { e.stopPropagation(); e.preventDefault(); }
+  }, true);
+})();
 </script>
 </body>
 </html>
