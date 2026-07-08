@@ -320,6 +320,8 @@
   .result-details { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
   .detail-card { background: var(--card); border-radius: 16px; padding: 16px 18px; }
   .detail-card h4 { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; }
+  .wrong-item { cursor: pointer; }
+  .wrong-item:active { transform: scale(.98); }
   .subject-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .subject-row:last-child { margin-bottom: 0; }
   .subject-row .s-name { font-size: 12px; font-weight: 500; width: 90px; flex-shrink: 0; }
@@ -621,7 +623,7 @@ function renderWrongNoteList() {
   }
   const items = notes.map(n => {
     const c = SUBJ_COLOR[n.subject] || '#6B7280';
-    return `<div class="detail-card">
+    return `<div class="detail-card wrong-item" onclick="startSingleWrongReview('${n.id}')">
       <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${n.subject}</div>
       <div style="font-size:13px;font-weight:500;line-height:1.5">${n.q}</div>
     </div>`;
@@ -633,15 +635,13 @@ function renderWrongNoteList() {
     </div>
     <div class="bottom-actions">
       <button class="btn-back" onclick="goTo('screen-home')">←</button>
-      <button class="btn-start" onclick="startWrongReview()">복습 시작하기 →</button>
+      <button class="btn-start" onclick="startWrongReview()">오답 전부 풀기 →</button>
     </div>
   `;
 }
-function startWrongReview() {
-  const notes = Object.values(getWrongNotes());
-  if (notes.length === 0) return;
+function beginReview(questions) {
   examMode = 'review';
-  QUESTIONS = shuffle(notes).map(shuffleOptions);
+  QUESTIONS = questions.map(shuffleOptions);
   answers  = new Array(QUESTIONS.length).fill(null);
   revealed = new Array(QUESTIONS.length).fill(false);
   flagged  = new Array(QUESTIONS.length).fill(false);
@@ -651,6 +651,16 @@ function startWrongReview() {
   document.getElementById('total-count').textContent = QUESTIONS.length;
   renderQ();
   goTo('screen-exam');
+}
+function startWrongReview() {
+  const notes = Object.values(getWrongNotes());
+  if (notes.length === 0) return;
+  beginReview(shuffle(notes));
+}
+function startSingleWrongReview(id) {
+  const note = getWrongNotes()[id];
+  if (!note) return;
+  beginReview([note]);
 }
 function retryFromResult() {
   if (examMode === 'chapter') goTo('screen-chapter-start');
