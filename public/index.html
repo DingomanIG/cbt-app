@@ -166,10 +166,25 @@
     padding: 6px 14px; font-size: 14px; font-weight: 700;
   }
   .timer.warning { background: rgba(245,166,35,.4); }
-  .progress-area { display: flex; align-items: center; gap: 10px; }
-  .progress-bar { flex: 1; height: 5px; background: rgba(255,255,255,.25); border-radius: 3px; overflow: hidden; }
-  .progress-fill { height: 100%; background: var(--accent); border-radius: 3px; transition: width .3s; }
-  .progress-label { font-size: 12px; opacity: .8; white-space: nowrap; }
+  .q-strip {
+    display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px;
+    scrollbar-width: none;
+  }
+  .q-strip::-webkit-scrollbar { display: none; }
+  .q-chip {
+    position: relative; flex: 0 0 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    background: rgba(255,255,255,.14); color: rgba(255,255,255,.85);
+    border: 2px solid transparent;
+  }
+  .q-chip.answered { background: rgba(255,255,255,.32); color: #fff; }
+  .q-chip.current  { background: #fff; color: var(--primary); border-color: var(--accent); }
+  .q-chip.flagged::after {
+    content: ''; position: absolute; top: -3px; right: -3px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); border: 1px solid var(--primary);
+  }
 
   .exam-body { flex: 1; overflow-y: auto; padding: 0 0 100px; }
 
@@ -257,37 +272,6 @@
   .nav-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); flex: 2; }
   .nav-btn:active:not(:disabled) { transform: scale(.97); }
   .nav-flag-btn { flex: 0 0 46px; padding: 14px 0; font-size: 16px; color: var(--accent); border-color: var(--accent); }
-
-  /* ── 문제 패널 ── */
-  .nav-panel {
-    position: fixed; bottom: -100%; left: 50%; transform: translateX(-50%);
-    width: 100%; max-width: 390px;
-    background: var(--card); border-radius: 24px 24px 0 0;
-    padding: 20px 20px 40px;
-    box-shadow: 0 -8px 32px rgba(0,0,0,.12);
-    transition: bottom .3s ease; z-index: 100;
-  }
-  .nav-panel.open { bottom: 0; }
-  .nav-panel-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 16px; }
-  .nav-panel h4 { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
-  .q-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-  .q-dot {
-    position: relative;
-    aspect-ratio: 1; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 11px; font-weight: 700; cursor: pointer;
-    background: var(--bg); color: var(--text-sub);
-    border: 2px solid transparent;
-  }
-  .q-dot.answered { background: #E6F4EE; color: var(--primary); border-color: var(--primary); }
-  .q-dot.current  { background: var(--primary); color: #fff; }
-  .q-dot.flagged::after {
-    content: ''; position: absolute; top: -3px; right: -3px;
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--accent); border: 1px solid #fff;
-  }
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 99; display: none; }
-  .overlay.show { display: block; }
 
   /* ── 결과 ── */
   .result-screen { background: var(--bg); flex: 1; overflow-y: auto; padding-bottom: 32px; }
@@ -474,12 +458,8 @@
       <div class="exam-top-row">
         <span class="exit" onclick="confirmExit()">✕ 종료</span>
         <div class="timer" id="timer">⏱ <span id="timer-text">60:00</span></div>
-        <span style="font-size:13px;opacity:.7;cursor:pointer" onclick="toggleNavPanel()">목록</span>
       </div>
-      <div class="progress-area">
-        <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
-        <div class="progress-label" id="progress-label">1 / 10</div>
-      </div>
+      <div class="q-strip" id="q-strip"></div>
     </div>
     <div class="exam-body" id="exam-body"></div>
     <div class="exam-nav">
@@ -516,14 +496,6 @@
         <button class="btn-home"  onclick="goTo('screen-home')">홈으로</button>
       </div>
     </div>
-  </div>
-
-  <!-- 문제 목록 패널 -->
-  <div class="overlay" id="overlay" onclick="closeNavPanel()"></div>
-  <div class="nav-panel" id="nav-panel">
-    <div class="nav-panel-handle"></div>
-    <h4>문제 목록 · <span id="answered-count">0</span>/<span id="total-count">0</span> 답변</h4>
-    <div class="q-grid" id="q-grid"></div>
   </div>
 
 </div>
@@ -648,7 +620,6 @@ function beginReview(questions) {
   currentQ = 0;
   clearInterval(timerInt);
   document.getElementById('timer').style.display = 'none';
-  document.getElementById('total-count').textContent = QUESTIONS.length;
   renderQ();
   goTo('screen-exam');
 }
@@ -746,7 +717,6 @@ async function startExam() {
     currentQ = 0;
     timerSec = QUESTIONS.length >= 60 ? 3600 : QUESTIONS.length * 60;
 
-    document.getElementById('total-count').textContent = QUESTIONS.length;
     document.getElementById('timer').style.display = '';
     clearInterval(timerInt);
     timerInt = setInterval(tickTimer, 1000);
@@ -784,8 +754,6 @@ function renderQ() {
   const rev = revealed[currentQ];
   const total = QUESTIONS.length;
 
-  document.getElementById('progress-fill').style.width = ((currentQ+1)/total*100) + '%';
-  document.getElementById('progress-label').textContent = `${currentQ+1} / ${total}`;
   document.getElementById('btn-prev').disabled = currentQ === 0;
   document.getElementById('btn-flag-jump').disabled = !flagged.some(Boolean);
 
@@ -838,7 +806,7 @@ function renderQ() {
       <div class="ex-text">${q.exp || '해설이 없습니다.'}</div>
     </div>
   `;
-  updateNavPanel();
+  updateQStrip();
 }
 
 function selectOpt(i) { if (!revealed[currentQ]) { answers[currentQ]=i; renderQ(); } }
@@ -874,25 +842,17 @@ function finishSingleReview() {
 function confirmExit() { if(confirm('시험을 종료하시겠습니까?')) { clearInterval(timerInt); goTo('screen-home'); } }
 
 /* ── 문제 패널 ── */
-function toggleNavPanel() {
-  document.getElementById('nav-panel').classList.toggle('open');
-  document.getElementById('overlay').classList.toggle('show');
-}
-function closeNavPanel() {
-  document.getElementById('nav-panel').classList.remove('open');
-  document.getElementById('overlay').classList.remove('show');
-}
-function updateNavPanel() {
-  document.getElementById('answered-count').textContent = answers.filter(a=>a!==null).length;
-  document.getElementById('q-grid').innerHTML = QUESTIONS.map((_,i)=>{
-    let cls='q-dot';
+function updateQStrip() {
+  document.getElementById('q-strip').innerHTML = QUESTIONS.map((_,i)=>{
+    let cls='q-chip';
     if (i===currentQ) cls+=' current';
     else if (answers[i]!==null) cls+=' answered';
     if (flagged[i]) cls+=' flagged';
-    return `<div class="${cls}" onclick="jumpTo(${i})">${i+1}</div>`;
+    return `<div class="${cls}" onclick="jumpTo(${i})" id="qchip-${i}">${i+1}</div>`;
   }).join('');
+  document.getElementById('qchip-'+currentQ)?.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
 }
-function jumpTo(i) { currentQ=i; renderQ(); closeNavPanel(); }
+function jumpTo(i) { currentQ=i; renderQ(); }
 
 /* ── 결과 ── */
 function finishExam() {
