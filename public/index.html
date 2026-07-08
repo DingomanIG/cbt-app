@@ -791,8 +791,13 @@ function renderQ() {
 
   const btnNext = document.getElementById('btn-next');
   if (currentQ === total-1) {
-    btnNext.textContent = '제출하기 ✓';
-    btnNext.onclick = confirmSubmit;
+    if (examMode === 'review' && total === 1) {
+      btnNext.textContent = '오답노트로 가기';
+      btnNext.onclick = finishSingleReview;
+    } else {
+      btnNext.textContent = '제출하기 ✓';
+      btnNext.onclick = confirmSubmit;
+    }
   } else {
     btnNext.textContent = '다음 ›';
     btnNext.onclick = nextQ;
@@ -858,6 +863,13 @@ function confirmSubmit() {
     if (!confirm(`답안을 작성하지 않은 문제가 ${unansweredCount}개 있습니다. 계속 진행하시겠습니까?`)) return;
   }
   if (confirm('제출할까요?')) finishExam();
+}
+function finishSingleReview() {
+  clearInterval(timerInt);
+  const q = QUESTIONS[0];
+  if (answers[0] !== null && answers[0] === q.answer) removeWrongNote(q.id);
+  renderWrongNoteList();
+  goTo('screen-wrong-note');
 }
 function confirmExit() { if(confirm('시험을 종료하시겠습니까?')) { clearInterval(timerInt); goTo('screen-home'); } }
 
