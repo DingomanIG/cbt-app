@@ -7,13 +7,23 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const NOTION_KEY = process.env.NOTION_KEY;
-  const DB_ID = process.env.NOTION_DB_ID;
+  const DB_IDS = {
+    mock: process.env.NOTION_DB_ID,
+    gisul_yesang: process.env.NOTION_DB_ID_GISUL_YESANG,
+    gisul: process.env.NOTION_DB_ID_GISUL,
+  };
+
+  const { subjects, cursor, dbKey = 'mock' } = req.body || {};
+
+  if (!Object.prototype.hasOwnProperty.call(DB_IDS, dbKey)) {
+    return res.status(400).json({ error: '알 수 없는 dbKey입니다' });
+  }
+
+  const DB_ID = DB_IDS[dbKey];
 
   if (!NOTION_KEY || !DB_ID) {
     return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
   }
-
-  const { subjects, cursor } = req.body || {};
 
   let filterBody = {};
   if (subjects && subjects.length > 0) {

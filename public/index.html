@@ -332,7 +332,7 @@
   <div class="screen active" id="screen-home">
     <div class="home-header">
       <div class="badge">🍳 한식조리기능사</div>
-      <h1>필기 CBT<br>모의고사</h1>
+      <h1>필기 CBT<br>기출예상문제</h1>
       <p>실제 출제 예상 문제로 합격을 준비하세요</p>
     </div>
     <div class="home-stats">
@@ -343,9 +343,14 @@
     <div class="home-menu">
       <div class="menu-card featured" onclick="goTo('screen-start')">
         <div class="icon">📝</div>
-        <div class="info"><h3>CBT 모의고사</h3><p>실제 문제로 시험 연습</p></div>
+        <div class="info"><h3>CBT 기출예상문제</h3><p>실제 문제로 시험 연습</p></div>
         <div class="arrow">›</div>
         <div class="tag">추천</div>
+      </div>
+      <div class="menu-card" onclick="goToGisulStart()">
+        <div class="icon">🎯</div>
+        <div class="info"><h3>기출문제</h3><p>최근 시행된 기출문제로 실전 연습</p></div>
+        <div class="arrow">›</div>
       </div>
       <div class="menu-card" onclick="goToChapterStart()">
         <div class="icon">📖</div>
@@ -364,7 +369,7 @@
   <div class="screen" id="screen-start">
     <div class="start-screen">
       <div class="start-top">
-        <h2>CBT 모의고사</h2>
+        <h2>CBT 기출예상문제</h2>
         <p>출제 과목과 문항 수를 선택하세요</p>
       </div>
       <div class="start-body">
@@ -391,6 +396,42 @@
         <div class="bottom-actions">
           <button class="btn-back" onclick="goTo('screen-home')">←</button>
           <button class="btn-start" onclick="startMockExam()">시험 시작하기 →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 기출문제 설정 -->
+  <div class="screen" id="screen-gisul-start">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>기출문제</h2>
+        <p>출제 과목과 문항 수를 선택하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="error-area-gisul"></div>
+        <div class="setting-section">
+          <h4>출제 과목 (복수 선택 · 미선택 시 전 과목)</h4>
+          <div class="subject-grid">
+            <div class="subject-btn" data-subject="기초조리실무" onclick="toggleSubject(this)">기초조리실무</div>
+            <div class="subject-btn" data-subject="위생관리"     onclick="toggleSubject(this)">위생관리</div>
+            <div class="subject-btn" data-subject="재료관리"     onclick="toggleSubject(this)">재료관리</div>
+            <div class="subject-btn" data-subject="구매관리"     onclick="toggleSubject(this)">구매관리</div>
+            <div class="subject-btn" data-subject="한식조리실무" onclick="toggleSubject(this)">한식조리실무</div>
+            <div class="subject-btn" data-subject="안전관리"     onclick="toggleSubject(this)">안전관리</div>
+          </div>
+        </div>
+        <div class="setting-section">
+          <h4>문항 수</h4>
+          <div class="count-row">
+            <div class="count-btn selected" data-count="10"  onclick="selectCount(this)">10문제</div>
+            <div class="count-btn"          data-count="20"  onclick="selectCount(this)">20문제</div>
+            <div class="count-btn"          data-count="60"  onclick="selectCount(this)">60문제</div>
+          </div>
+        </div>
+        <div class="bottom-actions">
+          <button class="btn-back" onclick="goTo('screen-home')">←</button>
+          <button class="btn-start" onclick="startGisulExam()">시험 시작하기 →</button>
         </div>
       </div>
     </div>
@@ -512,7 +553,14 @@ const DIFF_COLOR = {'하':'#22C55E','중':'#EAB308','상':'#EF4444'};
 let QUESTIONS = [], answers = [], revealed = [], flagged = [];
 let selectedSubjects = [], selectedCount = 10;
 let currentQ = 0, timerSec = 600, timerInt = null;
-let examMode = 'mock'; // 'mock' | 'chapter' | 'review'
+let examMode = 'mock'; // 'mock' | 'chapter' | 'review' | 'gisul'
+
+/* ── 모드별 문제 출처 DB ── */
+const DB_KEYS_BY_MODE = {
+  mock: ['mock', 'gisul_yesang'],
+  chapter: ['mock', 'gisul_yesang'],
+  gisul: ['gisul'],
+};
 
 /* ── 오답노트 저장소 (localStorage) ── */
 const WRONG_NOTES_KEY = 'wrongNotes';
@@ -540,7 +588,8 @@ function goTo(id) {
 /* ── 설정 ── */
 function toggleSubject(el) {
   el.classList.toggle('selected');
-  selectedSubjects = [...document.querySelectorAll('#screen-start .subject-btn.selected')].map(b => b.dataset.subject);
+  const scope = el.closest('.screen');
+  selectedSubjects = [...scope.querySelectorAll('.subject-btn.selected')].map(b => b.dataset.subject);
 }
 function selectSubjectSingle(el) {
   document.querySelectorAll('#screen-chapter-start .subject-btn').forEach(b => b.classList.remove('selected'));
@@ -567,6 +616,22 @@ async function startMockExam() {
   examMode = 'mock';
   await startExam();
 }
+
+/* ── 기출문제 진입/시작 ── */
+function goToGisulStart() {
+  selectedSubjects = [];
+  document.querySelectorAll('#screen-gisul-start .subject-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#screen-gisul-start .count-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('#screen-gisul-start .count-btn[data-count="10"]').classList.add('selected');
+  selectedCount = 10;
+  document.getElementById('error-area-gisul').innerHTML = '';
+  goTo('screen-gisul-start');
+}
+async function startGisulExam() {
+  examMode = 'gisul';
+  await startExam();
+}
+
 async function startChapterExam() {
   if (selectedSubjects.length === 0) {
     document.getElementById('error-area-ch').innerHTML =
@@ -637,15 +702,16 @@ function startSingleWrongReview(id) {
 function retryFromResult() {
   if (examMode === 'chapter') goTo('screen-chapter-start');
   else if (examMode === 'review') { renderWrongNoteList(); goTo('screen-wrong-note'); }
+  else if (examMode === 'gisul') goTo('screen-gisul-start');
   else goTo('screen-start');
 }
 
 /* ── 문제 fetch (Vercel API 경유) ── */
-async function fetchAllQuestions() {
+async function fetchQuestionsFromDb(dbKey) {
   let all = [], hasMore = true, cursor;
   let pages = 0;
   while (hasMore && pages < 4) {
-    const body = { subjects: selectedSubjects };
+    const body = { subjects: selectedSubjects, dbKey };
     if (cursor) body.cursor = cursor;
     const res = await fetch('/api/questions', {
       method: 'POST',
@@ -661,6 +727,13 @@ async function fetchAllQuestions() {
     hasMore = data.has_more;
     cursor = data.next_cursor;
     pages++;
+  }
+  return all;
+}
+async function fetchAllQuestions(dbKeys) {
+  let all = [];
+  for (const dbKey of dbKeys) {
+    all = all.concat(await fetchQuestionsFromDb(dbKey));
   }
   return all;
 }
@@ -707,7 +780,7 @@ async function startExam() {
   document.getElementById('error-area').innerHTML = '';
   goTo('screen-loading');
   try {
-    const pages = await fetchAllQuestions();
+    const pages = await fetchAllQuestions(DB_KEYS_BY_MODE[examMode] || ['mock']);
     const parsed = pages.map(parsePage).filter(Boolean);
     if (parsed.length === 0) throw new Error('문제가 없습니다. 과목 선택을 확인해주세요.');
 
@@ -728,6 +801,9 @@ async function startExam() {
     if (examMode === 'chapter') {
       goTo('screen-chapter-start');
       document.getElementById('error-area-ch').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
+    } else if (examMode === 'gisul') {
+      goTo('screen-gisul-start');
+      document.getElementById('error-area-gisul').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
     } else {
       goTo('screen-start');
       document.getElementById('error-area').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
