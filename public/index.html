@@ -791,10 +791,11 @@ function shuffle(arr) {
 
 function shuffleOptions(q) {
   const order = shuffle(q.opts.map((_, i) => i));
+  const exps = q.optExps || [];
   return {
     ...q,
     opts: order.map(i => q.opts[i]),
-    optExps: order.map(i => q.optExps[i]),
+    optExps: order.map(i => exps[i] || ''),
     answer: order.indexOf(q.answer)
   };
 }
