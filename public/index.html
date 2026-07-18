@@ -22,6 +22,8 @@
     --correct-bg: #F0FDF4;
     --wrong-bg: #FEF2F2;
     --opt-sel: #E6F4EE;
+    --neutral-bg: #EEF2F6;
+    --neutral-text: #4B5768;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -209,6 +211,7 @@
   .question-text { font-size: 15px; font-weight: 600; line-height: 1.65; }
 
   .options-list { margin: 10px 14px 0; display: flex; flex-direction: column; gap: 9px; }
+  .opt-block { display: flex; flex-direction: column; }
   .option-item {
     background: var(--card); border-radius: 14px; padding: 15px;
     display: flex; align-items: center; gap: 14px;
@@ -220,6 +223,7 @@
   .option-item.selected { border-color: var(--primary); background: var(--opt-sel); }
   .option-item.correct  { border-color: var(--correct); background: var(--correct-bg); }
   .option-item.wrong    { border-color: var(--wrong);   background: var(--wrong-bg); }
+  .option-item.has-explain { border-radius: 14px 14px 0 0; }
   .opt-num {
     width: 30px; height: 30px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
@@ -232,6 +236,15 @@
   .option-item.wrong    .opt-num { background: var(--wrong);   color: #fff; }
   .opt-text { font-size: 14px; line-height: 1.5; font-weight: 500; }
   .opt-icon { margin-left: auto; font-size: 16px; flex-shrink: 0; }
+
+  .opt-explain {
+    padding: 11px 15px; font-size: 12.5px; line-height: 1.6;
+    border-radius: 0 0 14px 14px;
+    margin-top: -2px;
+  }
+  .opt-explain.correct { background: var(--correct-bg); color: #14532D; }
+  .opt-explain.wrong    { background: var(--wrong-bg);   color: #7F1D1D; }
+  .opt-explain.neutral  { background: var(--neutral-bg); color: var(--neutral-text); }
 
   .explanation-card {
     background: var(--accent-lt); border-left: 3px solid var(--accent);
@@ -751,11 +764,17 @@ function parsePage(page) {
   const o1  = get(p['보기1']), o2 = get(p['보기2']);
   const o3  = get(p['보기3']), o4 = get(p['보기4']);
   if (!q || !o1 || !o2) return null;
+
+  const rawOpts = [o1, o2, o3, o4];
+  const rawExps = [get(p['보기1_해설']), get(p['보기2_해설']), get(p['보기3_해설']), get(p['보기4_해설'])];
+  const opts = [], optExps = [];
+  rawOpts.forEach((o, i) => { if (o) { opts.push(o); optExps.push(rawExps[i]); } });
+
   return {
     id: page.id,
     subject: get(p['과목']), chapter: get(p['챕터']),
     difficulty: get(p['난이도']), q,
-    opts: [o1, o2, o3, o4].filter(Boolean),
+    opts, optExps,
     answer: parseInt(get(p['정답']) || '1') - 1,
     exp: get(p['해설'])
   };
@@ -772,7 +791,12 @@ function shuffle(arr) {
 
 function shuffleOptions(q) {
   const order = shuffle(q.opts.map((_, i) => i));
-  return { ...q, opts: order.map(i => q.opts[i]), answer: order.indexOf(q.answer) };
+  return {
+    ...q,
+    opts: order.map(i => q.opts[i]),
+    optExps: order.map(i => q.optExps[i]),
+    answer: order.indexOf(q.answer)
+  };
 }
 
 /* ── 시험 시작 ── */
@@ -852,14 +876,22 @@ function renderQ() {
   const dc = DIFF_COLOR[q.difficulty] || '#6B7280';
 
   const optsHtml = q.opts.map((o, i) => {
-    let cls = 'option-item'; let icon = '';
+    let cls = 'option-item'; let icon = ''; let state = 'neutral';
     if (rev) {
-      if (i === q.answer)        { cls += ' correct'; icon = '<span class="opt-icon">✓</span>'; }
-      else if (i === sel)        { cls += ' wrong';   icon = '<span class="opt-icon">✗</span>'; }
+      if (i === q.answer)        { cls += ' correct'; icon = '<span class="opt-icon">✓</span>'; state = 'correct'; }
+      else if (i === sel)        { cls += ' wrong';   icon = '<span class="opt-icon">✗</span>'; state = 'wrong'; }
+      cls += ' has-explain';
     } else if (i === sel)        { cls += ' selected'; }
-    return `<div class="${cls}" onclick="selectOpt(${i})">
-      <div class="opt-num">${i+1}</div>
-      <div class="opt-text">${o}</div>${icon}
+
+    const explainHtml = rev
+      ? `<div class="opt-explain ${state}">${(q.optExps && q.optExps[i]) || '이 보기에 대한 해설이 아직 준비되지 않았습니다.'}</div>`
+      : '';
+
+    return `<div class="opt-block">
+      <div class="${cls}" onclick="selectOpt(${i})">
+        <div class="opt-num">${i+1}</div>
+        <div class="opt-text">${o}</div>${icon}
+      </div>${explainHtml}
     </div>`;
   }).join('');
 
