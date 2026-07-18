@@ -269,6 +269,13 @@
   }
   .flag-btn.active { background: var(--accent-lt); color: #B8830A; border-color: var(--accent); }
 
+  .star-btn {
+    font-size: 11px; font-weight: 600; color: var(--text-sub);
+    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 3px 9px; cursor: pointer; flex-shrink: 0;
+  }
+  .star-btn.active { background: var(--opt-sel); color: var(--primary); border-color: var(--primary); }
+
   .exam-nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 390px;
@@ -318,8 +325,8 @@
   .result-details { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
   .detail-card { background: var(--card); border-radius: 16px; padding: 16px 18px; }
   .detail-card h4 { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; }
-  .wrong-item { cursor: pointer; }
-  .wrong-item:active { transform: scale(.98); }
+  .wrong-item, .star-item { cursor: pointer; }
+  .wrong-item:active, .star-item:active { transform: scale(.98); }
   .subject-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
   .subject-row:last-child { margin-bottom: 0; }
   .subject-row .s-name { font-size: 12px; font-weight: 500; width: 90px; flex-shrink: 0; }
@@ -373,6 +380,11 @@
       <div class="menu-card" onclick="goToWrongNote()">
         <div class="icon">📋</div>
         <div class="info"><h3>오답노트</h3><p>틀린 문제만 모아서 복습</p></div>
+        <div class="arrow">›</div>
+      </div>
+      <div class="menu-card" onclick="goToStarList()">
+        <div class="icon">⭐</div>
+        <div class="info"><h3>별표문제</h3><p>내가 표시한 문제만 모아보기</p></div>
         <div class="arrow">›</div>
       </div>
     </div>
@@ -499,6 +511,19 @@
     </div>
   </div>
 
+  <!-- 별표문제 -->
+  <div class="screen" id="screen-star-list">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>별표문제</h2>
+        <p>내가 표시한 문제만 모아보세요</p>
+      </div>
+      <div class="start-body">
+        <div id="star-list-body"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 로딩 -->
   <div class="screen" id="screen-loading">
     <div class="loading-screen">
@@ -591,6 +616,24 @@ function removeWrongNote(id) {
   delete notes[id];
   localStorage.setItem(WRONG_NOTES_KEY, JSON.stringify(notes));
 }
+
+/* ── 별표문제 저장소 (localStorage) ── */
+const STARRED_KEY = 'starredQuestions';
+function getStarred() {
+  try { return JSON.parse(localStorage.getItem(STARRED_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function saveStarred(q) {
+  const starred = getStarred();
+  starred[q.id] = q;
+  localStorage.setItem(STARRED_KEY, JSON.stringify(starred));
+}
+function removeStarred(id) {
+  const starred = getStarred();
+  delete starred[id];
+  localStorage.setItem(STARRED_KEY, JSON.stringify(starred));
+}
+function isStarred(id) { return !!getStarred()[id]; }
 
 /* ── 화면 ── */
 function goTo(id) {
@@ -690,8 +733,8 @@ function renderWrongNoteList() {
     </div>
   `;
 }
-function beginReview(questions) {
-  examMode = 'review';
+function beginReview(questions, mode = 'review') {
+  examMode = mode;
   QUESTIONS = questions.map(shuffleOptions);
   answers  = new Array(QUESTIONS.length).fill(null);
   revealed = new Array(QUESTIONS.length).fill(false);
@@ -712,9 +755,57 @@ function startSingleWrongReview(id) {
   if (!note) return;
   beginReview([note]);
 }
+
+/* ── 별표문제 진입/복습 시작 ── */
+function goToStarList() {
+  renderStarList();
+  goTo('screen-star-list');
+}
+function renderStarList() {
+  const notes = Object.values(getStarred());
+  const body = document.getElementById('star-list-body');
+  if (notes.length === 0) {
+    body.innerHTML = `
+      <div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">아직 별표한 문제가 없습니다.</div>
+      <div class="bottom-actions">
+        <button class="btn-back" onclick="goTo('screen-home')">←</button>
+      </div>
+    `;
+    return;
+  }
+  const items = notes.map(n => {
+    const c = SUBJ_COLOR[n.subject] || '#6B7280';
+    return `<div class="detail-card star-item" onclick="startSingleStarReview('${n.id}')">
+      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${n.subject}</div>
+      <div style="font-size:13px;font-weight:500;line-height:1.5">${n.q}</div>
+    </div>`;
+  }).join('');
+  body.innerHTML = `
+    <div class="setting-section">
+      <h4>별표한 문제 (${notes.length}개)</h4>
+      <div style="display:flex;flex-direction:column;gap:10px">${items}</div>
+    </div>
+    <div class="bottom-actions">
+      <button class="btn-back" onclick="goTo('screen-home')">←</button>
+      <button class="btn-start" onclick="startStarReview()">별표문제 전부 풀기 →</button>
+    </div>
+  `;
+}
+function startStarReview() {
+  const notes = Object.values(getStarred());
+  if (notes.length === 0) return;
+  beginReview(shuffle(notes), 'starReview');
+}
+function startSingleStarReview(id) {
+  const note = getStarred()[id];
+  if (!note) return;
+  beginReview([note], 'starReview');
+}
+
 function retryFromResult() {
   if (examMode === 'chapter') goTo('screen-chapter-start');
   else if (examMode === 'review') { renderWrongNoteList(); goTo('screen-wrong-note'); }
+  else if (examMode === 'starReview') { renderStarList(); goTo('screen-star-list'); }
   else if (examMode === 'gisul') goTo('screen-gisul-start');
   else goTo('screen-start');
 }
@@ -864,6 +955,9 @@ function renderQ() {
     if (examMode === 'review' && total === 1) {
       btnNext.textContent = '오답노트로 가기';
       btnNext.onclick = finishSingleReview;
+    } else if (examMode === 'starReview' && total === 1) {
+      btnNext.textContent = '별표문제로 가기';
+      btnNext.onclick = finishSingleReview;
     } else {
       btnNext.textContent = '제출하기 ✓';
       btnNext.onclick = confirmSubmit;
@@ -905,7 +999,10 @@ function renderQ() {
         <div class="q-num">${currentQ+1}</div>
         <div class="q-subject" style="color:${sc};background:${sc}18">${q.subject}</div>
         <div class="q-diff" style="color:${dc}">난이도 ${q.difficulty}</div>
-        <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()">${flagged[currentQ] ? '🚩 체크됨' : '🏳️ 체크'}</div>
+        <div style="margin-left:auto;display:flex;gap:6px;">
+          <div class="star-btn ${isStarred(q.id) ? 'active' : ''}" onclick="toggleStar()">${isStarred(q.id) ? '⭐ 별표됨' : '☆ 별표'}</div>
+          <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()">${flagged[currentQ] ? '🚩 체크됨' : '🏳️ 체크'}</div>
+        </div>
       </div>
       <div class="question-text">${q.q}</div>
     </div>
@@ -922,6 +1019,11 @@ function renderQ() {
 function selectOpt(i) { if (!revealed[currentQ]) { answers[currentQ]=i; renderQ(); } }
 function revealAnswer() { revealed[currentQ]=true; renderQ(); }
 function toggleFlag() { flagged[currentQ] = !flagged[currentQ]; renderQ(); }
+function toggleStar() {
+  const q = QUESTIONS[currentQ];
+  if (isStarred(q.id)) removeStarred(q.id); else saveStarred(q);
+  renderQ();
+}
 function jumpToFlagged() {
   const total = QUESTIONS.length;
   for (let step = 1; step <= total; step++) {
@@ -945,6 +1047,11 @@ function confirmSubmit() {
 function finishSingleReview() {
   clearInterval(timerInt);
   const q = QUESTIONS[0];
+  if (examMode === 'starReview') {
+    renderStarList();
+    goTo('screen-star-list');
+    return;
+  }
   if (answers[0] !== null && answers[0] === q.answer) removeWrongNote(q.id);
   renderWrongNoteList();
   goTo('screen-wrong-note');
@@ -969,7 +1076,8 @@ function finishExam() {
   clearInterval(timerInt);
   let correct = 0;
   const subjMap = {};
-  const isReview = examMode === 'review';
+  const isWrongReview = examMode === 'review';
+  const isReviewUI = isWrongReview || examMode === 'starReview';
   QUESTIONS.forEach((q,i) => {
     if (!subjMap[q.subject]) subjMap[q.subject] = {ok:0, total:0};
     subjMap[q.subject].total++;
@@ -977,7 +1085,7 @@ function finishExam() {
     const isCorrect = answered && answers[i] === q.answer;
     if (isCorrect) { correct++; subjMap[q.subject].ok++; }
 
-    if (isReview) {
+    if (isWrongReview) {
       if (isCorrect) removeWrongNote(q.id);
     } else if (answered && !isCorrect) {
       saveWrongNote(q);
@@ -987,19 +1095,19 @@ function finishExam() {
   const score = Math.round(correct/QUESTIONS.length*100);
   const pass  = score >= 60;
 
-  document.getElementById('result-emoji').textContent = isReview ? '📚' : (pass ? '🎉' : '😔');
-  document.getElementById('result-title').textContent = isReview
+  document.getElementById('result-emoji').textContent = isReviewUI ? '📚' : (pass ? '🎉' : '😔');
+  document.getElementById('result-title').textContent = isReviewUI
     ? '복습 완료!'
     : (pass ? '합격을 축하합니다!' : '아쉽지만 불합격입니다');
-  document.getElementById('result-subtitle').textContent = isReview
+  document.getElementById('result-subtitle').textContent = isReviewUI
     ? `${correct}문제를 다시 맞혔어요`
     : (pass ? '실력을 더 단단히 다져보세요!' : '오답을 중심으로 다시 도전해보세요!');
   document.getElementById('score-ring').className = `score-ring ${pass?'pass':'fail'}`;
   document.getElementById('score-num').textContent = score;
   document.getElementById('score-detail').textContent = `${correct}문제 정답 / 전체 ${QUESTIONS.length}문제`;
   const badge = document.getElementById('pass-badge');
-  badge.style.display = isReview ? 'none' : '';
-  if (!isReview) {
+  badge.style.display = isReviewUI ? 'none' : '';
+  if (!isReviewUI) {
     badge.textContent = pass ? '✓ 합격' : '✗ 불합격';
     badge.className = `pass-badge ${pass?'pass':'fail'}`;
   }
