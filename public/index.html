@@ -851,12 +851,14 @@ function parsePage(page) {
     if (prop.type === 'title')     return prop.title?.[0]?.plain_text || '';
     if (prop.type === 'rich_text') return prop.rich_text?.[0]?.plain_text || '';
     if (prop.type === 'select')    return prop.select?.name || '';
+    if (prop.type === 'checkbox')  return !!prop.checkbox;
     return '';
   };
   const q   = get(p['문제']);
   const o1  = get(p['보기1']), o2 = get(p['보기2']);
   const o3  = get(p['보기3']), o4 = get(p['보기4']);
   if (!q || !o1 || !o2) return null;
+  if (get(p['반영금지']) === true) return null;
 
   const rawOpts = [o1, o2, o3, o4];
   const rawExps = [get(p['보기1_해설']), get(p['보기2_해설']), get(p['보기3_해설']), get(p['보기4_해설'])];

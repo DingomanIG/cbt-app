@@ -25,14 +25,16 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
   }
 
-  let filterBody = {};
+  const excludeFilter = { property: '반영금지', checkbox: { equals: false } };
+  let subjectFilter = null;
   if (subjects && subjects.length > 0) {
-    filterBody = {
-      filter: subjects.length === 1
-        ? { property: '과목', select: { equals: subjects[0] } }
-        : { or: subjects.map(s => ({ property: '과목', select: { equals: s } })) }
-    };
+    subjectFilter = subjects.length === 1
+      ? { property: '과목', select: { equals: subjects[0] } }
+      : { or: subjects.map(s => ({ property: '과목', select: { equals: s } })) };
   }
+  const filterBody = {
+    filter: subjectFilter ? { and: [subjectFilter, excludeFilter] } : excludeFilter
+  };
 
   const body = { page_size: 100, ...filterBody };
   if (cursor) body.start_cursor = cursor;
