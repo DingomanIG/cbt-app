@@ -403,6 +403,11 @@
         <div class="info"><h3>즐겨찾기</h3><p>내가 표시한 문제만 모아보기</p></div>
         <div class="arrow">›</div>
       </div>
+      <div class="menu-card" onclick="goToResults()">
+        <div class="icon">📊</div>
+        <div class="info"><h3>나의 풀이결과</h3><p>누적 풀이 통계 확인하기</p></div>
+        <div class="arrow">›</div>
+      </div>
     </div>
   </div>
 
@@ -536,6 +541,19 @@
       </div>
       <div class="start-body">
         <div id="star-list-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 나의 풀이결과 -->
+  <div class="screen" id="screen-results">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>나의 풀이결과</h2>
+        <p>지금까지의 누적 풀이 통계를 확인하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="results-body"></div>
       </div>
     </div>
   </div>
@@ -674,6 +692,64 @@ function persistProgress() {
     QUESTIONS, answers, revealed, flagged, currentQ, timerSec,
     savedAt: Date.now()
   });
+}
+
+/* ── 풀이결과 히스토리 (localStorage) ── */
+const EXAM_HISTORY_KEY = 'examHistory';
+function getExamHistory() {
+  try { return JSON.parse(localStorage.getItem(EXAM_HISTORY_KEY) || '[]'); }
+  catch(e) { return []; }
+}
+function addExamHistory(record) {
+  const hist = getExamHistory();
+  hist.push(record);
+  localStorage.setItem(EXAM_HISTORY_KEY, JSON.stringify(hist));
+}
+function computeCumulativeStats() {
+  const history = getExamHistory();
+  let totalOk = 0, totalCount = 0;
+  const subjTotals = {};
+  history.forEach(h => {
+    totalOk += h.correct; totalCount += h.total;
+    Object.entries(h.subjMap).forEach(([subj, d]) => {
+      if (!subjTotals[subj]) subjTotals[subj] = { ok: 0, total: 0 };
+      subjTotals[subj].ok += d.ok;
+      subjTotals[subj].total += d.total;
+    });
+  });
+  return { totalOk, totalCount, subjTotals, attemptCount: history.length };
+}
+function goToResults() { renderResultsScreen(); goTo('screen-results'); }
+function renderResultsScreen() {
+  const body = document.getElementById('results-body');
+  const { totalOk, totalCount, subjTotals, attemptCount } = computeCumulativeStats();
+  if (attemptCount === 0) {
+    body.innerHTML = `
+      <div class="error-box">아직 응시한 시험이 없습니다. 문제를 풀어보세요!</div>
+      <div class="bottom-actions"><button class="btn-back" onclick="goTo('screen-home')">←</button></div>`;
+    return;
+  }
+  const overallPct = Math.round(totalOk / totalCount * 100);
+  const subjRows = Object.entries(subjTotals).map(([subj, d]) => {
+    const pct = Math.round(d.ok / d.total * 100);
+    const c = SUBJ_COLOR[subj] || '#6B7280';
+    return `<div class="subject-row">
+      <div class="s-name" style="color:${c}">${subj}</div>
+      <div class="s-bar"><div class="s-fill" style="width:${pct}%;background:${c}"></div></div>
+      <div class="s-pct" style="color:${c}">${pct}%</div>
+    </div>`;
+  }).join('');
+
+  body.innerHTML = `
+    <div class="setting-section">
+      <h4>누적 정답률</h4>
+      <div style="font-size:28px;font-weight:700;">${overallPct}% <span style="font-size:14px;font-weight:400;color:var(--text-sub)">(${totalOk}/${totalCount})</span></div>
+    </div>
+    <div class="setting-section">
+      <h4>과목별 결과</h4>
+      ${subjRows}
+    </div>
+    <div class="bottom-actions"><button class="btn-back" onclick="goTo('screen-home')">←</button></div>`;
 }
 
 /* ── 화면 ── */
@@ -1193,6 +1269,10 @@ function finishExam() {
 
   const score = Math.round(correct/QUESTIONS.length*100);
   const pass  = score >= 60;
+
+  if (['mock','gisul','chapter'].includes(examMode)) {
+    addExamHistory({ mode: examMode, correct, total: QUESTIONS.length, score, pass, subjMap, finishedAt: Date.now() });
+  }
 
   document.getElementById('result-emoji').textContent = isReviewUI ? '📚' : (pass ? '🎉' : '😔');
   document.getElementById('result-title').textContent = isReviewUI
