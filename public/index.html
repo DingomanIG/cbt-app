@@ -103,6 +103,19 @@
     font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
   }
 
+  .home-progress { padding: 0 16px 4px; }
+  .home-progress .section-title { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 8px; }
+  .progress-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .progress-card {
+    background: var(--accent); color: #fff; border-radius: 14px;
+    padding: 14px; cursor: pointer;
+  }
+  .progress-card:active { transform: scale(.98); }
+  .progress-card .p-title { font-size: 11px; opacity: .85; }
+  .progress-card .p-sub { font-size: 14px; font-weight: 700; margin: 4px 0 8px; }
+  .progress-card .p-progress { font-size: 12px; opacity: .9; }
+  .progress-card .p-progress b { font-size: 15px; font-weight: 700; }
+
   /* ── 설정 ── */
   .start-screen { background: var(--primary); flex: 1; display: flex; flex-direction: column; }
   .start-top { padding: 52px 24px 32px; color: #fff; }
@@ -362,6 +375,7 @@
       <div class="stat-box"><div class="val">60분</div><div class="lbl">제한시간</div></div>
       <div class="stat-box"><div class="val">60점</div><div class="lbl">합격기준</div></div>
     </div>
+    <div class="home-progress" id="home-progress" style="display:none"></div>
     <div class="home-menu">
       <div class="menu-card featured" onclick="goTo('screen-start')">
         <div class="icon">📝</div>
@@ -637,10 +651,36 @@ function removeStarred(id) {
 }
 function isStarred(id) { return !!getStarred()[id]; }
 
+/* ── 진행중인 시험 저장소 (localStorage) ── */
+const EXAM_PROGRESS_KEY = 'examProgress';
+function getExamProgress() {
+  try { return JSON.parse(localStorage.getItem(EXAM_PROGRESS_KEY) || '{}'); }
+  catch(e) { return {}; }
+}
+function saveExamProgress(mode, snapshot) {
+  const all = getExamProgress();
+  all[mode] = snapshot;
+  localStorage.setItem(EXAM_PROGRESS_KEY, JSON.stringify(all));
+}
+function removeExamProgress(mode) {
+  const all = getExamProgress();
+  delete all[mode];
+  localStorage.setItem(EXAM_PROGRESS_KEY, JSON.stringify(all));
+}
+function persistProgress() {
+  if (!['mock','gisul','chapter'].includes(examMode)) return;
+  saveExamProgress(examMode, {
+    examMode, selectedSubjects, selectedCount,
+    QUESTIONS, answers, revealed, flagged, currentQ, timerSec,
+    savedAt: Date.now()
+  });
+}
+
 /* ── 화면 ── */
 function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if (id === 'screen-home') renderInProgressCards();
 }
 
 /* ── 설정 ── */
@@ -910,6 +950,7 @@ async function startExam() {
     flagged  = new Array(QUESTIONS.length).fill(false);
     currentQ = 0;
     timerSec = QUESTIONS.length >= 60 ? 3600 : QUESTIONS.length * 60;
+    persistProgress();
 
     document.getElementById('timer').style.display = '';
     clearInterval(timerInt);
@@ -931,6 +972,58 @@ async function startExam() {
   }
 }
 
+/* ── 진행중인 시험 이어풀기 ── */
+function resumeExam(mode) {
+  const snap = getExamProgress()[mode];
+  if (!snap) return;
+  examMode = snap.examMode;
+  selectedSubjects = snap.selectedSubjects;
+  selectedCount = snap.selectedCount;
+  QUESTIONS = snap.QUESTIONS;
+  answers = snap.answers;
+  revealed = snap.revealed;
+  flagged = snap.flagged;
+  currentQ = snap.currentQ;
+  timerSec = snap.timerSec;
+
+  document.getElementById('timer').style.display = '';
+  clearInterval(timerInt);
+  timerInt = setInterval(tickTimer, 1000);
+  updateTimer();
+  renderQ();
+  goTo('screen-exam');
+}
+const PROGRESS_MODE_LABELS = { mock: 'CBT 기출예상문제', gisul: '기출문제', chapter: '단원별 연습' };
+function progressLabel(snap) {
+  if (snap.examMode === 'chapter' && snap.selectedSubjects?.length) {
+    return snap.selectedSubjects.length === 1
+      ? snap.selectedSubjects[0]
+      : `${snap.selectedSubjects[0]} 외 ${snap.selectedSubjects.length - 1}과목`;
+  }
+  return '실전 연습';
+}
+function renderInProgressCards() {
+  const container = document.getElementById('home-progress');
+  const sessions = Object.values(getExamProgress())
+    .filter(s => s.answers.filter(a => a !== null).length > 0)
+    .sort((a,b) => b.savedAt - a.savedAt)
+    .slice(0, 2);
+  if (sessions.length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
+  container.style.display = '';
+  container.innerHTML = `
+    <div class="section-title">진행중인 문제</div>
+    <div class="progress-cards">
+      ${sessions.map(s => {
+        const answered = s.answers.filter(a => a !== null).length;
+        return `<div class="progress-card" onclick="resumeExam('${s.examMode}')">
+          <div class="p-title">${PROGRESS_MODE_LABELS[s.examMode] || ''}</div>
+          <div class="p-sub">${progressLabel(s)}</div>
+          <div class="p-progress">풀이중 <b>${answered}/${s.QUESTIONS.length}</b></div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
 /* ── 타이머 ── */
 function updateTimer() {
   const m = String(Math.floor(timerSec/60)).padStart(2,'0');
@@ -941,6 +1034,7 @@ function updateTimer() {
 function tickTimer() {
   timerSec--;
   updateTimer();
+  if (timerSec % 10 === 0) persistProgress();
   if (timerSec <= 0) { clearInterval(timerInt); finishExam(); }
 }
 
@@ -1020,9 +1114,9 @@ function renderQ() {
   updateQStrip();
 }
 
-function selectOpt(i) { if (!revealed[currentQ]) { answers[currentQ]=i; renderQ(); } }
-function revealAnswer() { revealed[currentQ]=true; renderQ(); }
-function toggleFlag() { flagged[currentQ] = !flagged[currentQ]; renderQ(); }
+function selectOpt(i) { if (!revealed[currentQ]) { answers[currentQ]=i; renderQ(); persistProgress(); } }
+function revealAnswer() { revealed[currentQ]=true; renderQ(); persistProgress(); }
+function toggleFlag() { flagged[currentQ] = !flagged[currentQ]; renderQ(); persistProgress(); }
 function toggleStar() {
   const q = QUESTIONS[currentQ];
   if (isStarred(q.id)) removeStarred(q.id); else saveStarred(q);
@@ -1035,8 +1129,8 @@ function jumpToFlagged() {
     if (flagged[idx]) { currentQ = idx; renderQ(); return; }
   }
 }
-function prevQ() { if (currentQ>0) { currentQ--; renderQ(); } }
-function nextQ() { if (currentQ<QUESTIONS.length-1) { currentQ++; renderQ(); } }
+function prevQ() { if (currentQ>0) { currentQ--; renderQ(); persistProgress(); } }
+function nextQ() { if (currentQ<QUESTIONS.length-1) { currentQ++; renderQ(); persistProgress(); } }
 function confirmSubmit() {
   const flaggedCount = flagged.filter(Boolean).length;
   if (flaggedCount > 0) {
@@ -1073,11 +1167,12 @@ function updateQStrip() {
   }).join('');
   document.getElementById('qchip-'+currentQ)?.scrollIntoView({ behavior:'smooth', inline:'center', block:'nearest' });
 }
-function jumpTo(i) { currentQ=i; renderQ(); }
+function jumpTo(i) { currentQ=i; renderQ(); persistProgress(); }
 
 /* ── 결과 ── */
 function finishExam() {
   clearInterval(timerInt);
+  if (['mock','gisul','chapter'].includes(examMode)) removeExamProgress(examMode);
   let correct = 0;
   const subjMap = {};
   const isWrongReview = examMode === 'review';
