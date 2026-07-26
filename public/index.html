@@ -877,7 +877,7 @@ function beginReview(questions, mode = 'review') {
   document.getElementById('timer').style.display = 'none';
   renderQ();
   goTo('screen-exam');
-  loadSummaryNotes(QUESTIONS);
+  loadSummaryNotes();
 }
 function startWrongReview() {
   const notes = Object.values(getWrongNotes());
@@ -977,13 +977,13 @@ async function fetchAllQuestions(dbKeys) {
 }
 
 /* ── 요약노트 fetch (Vercel API 경유) ── */
-const notesCache = new Map(); // subject -> parsed note[]
 let SUMMARY_NOTES = [];
-async function fetchSummaryNotesForSubject(subject) {
+let summaryNotesLoaded = false;
+async function fetchAllSummaryNotes() {
   let all = [], hasMore = true, cursor;
   let pages = 0;
   while (hasMore && pages < 4) {
-    const body = { subjects: [subject] };
+    const body = {};
     if (cursor) body.cursor = cursor;
     const res = await fetch('/api/summary-notes', {
       method: 'POST',
@@ -999,20 +999,15 @@ async function fetchSummaryNotesForSubject(subject) {
   }
   return all.map(parseSummaryNote);
 }
-async function loadSummaryNotes(questions) {
-  const subjects = [...new Set(questions.map(q => q.subject).filter(Boolean))];
-  const missing = subjects.filter(s => !notesCache.has(s));
-  if (missing.length > 0) {
-    await Promise.all(missing.map(async (s) => {
-      notesCache.set(s, await fetchSummaryNotesForSubject(s));
-    }));
-    SUMMARY_NOTES = [].concat(...notesCache.values());
-    if (document.getElementById('screen-exam')?.classList.contains('active')) renderQ();
-  }
+async function loadSummaryNotes() {
+  if (summaryNotesLoaded) return;
+  summaryNotesLoaded = true;
+  SUMMARY_NOTES = await fetchAllSummaryNotes();
+  if (document.getElementById('screen-exam')?.classList.contains('active')) renderQ();
 }
 function findNoteFor(q) {
   const qKeywords = q.keywords || [];
-  return SUMMARY_NOTES.find(n => n.subject === q.subject && n.keywords.some(k => qKeywords.includes(k)));
+  return SUMMARY_NOTES.find(n => n.keywords.some(k => qKeywords.includes(k)));
 }
 
 function parsePage(page) {
@@ -1135,7 +1130,7 @@ async function startExam() {
     updateTimer();
     renderQ();
     goTo('screen-exam');
-    loadSummaryNotes(QUESTIONS);
+    loadSummaryNotes();
   } catch(e) {
     if (examMode === 'chapter') {
       goTo('screen-chapter-start');
@@ -1170,7 +1165,7 @@ function resumeExam(mode) {
   updateTimer();
   renderQ();
   goTo('screen-exam');
-  loadSummaryNotes(QUESTIONS);
+  loadSummaryNotes();
 }
 const PROGRESS_MODE_LABELS = { mock: 'CBT 기출예상문제', gisul: '기출문제', chapter: '단원별 연습' };
 function progressLabel(snap) {
