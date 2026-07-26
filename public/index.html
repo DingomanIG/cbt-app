@@ -24,6 +24,10 @@
     --opt-sel: #E6F4EE;
     --neutral-bg: #EEF2F6;
     --neutral-text: #4B5768;
+    --summary-bg: #FFF0E5;
+    --summary-border: #F08A3C;
+    --summary-title: #B85C1A;
+    --summary-text: #6B3A12;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -267,6 +271,17 @@
   .explanation-card.show { display: block; }
   .explanation-card .ex-title { font-size: 11px; font-weight: 700; color: #B8830A; margin-bottom: 6px; }
   .explanation-card .ex-text  { font-size: 13px; line-height: 1.65; color: #7A5000; }
+
+  .summary-note-card {
+    background: var(--summary-bg); border-left: 3px solid var(--summary-border);
+    border-radius: 14px; margin: 10px 14px 0;
+    padding: 14px 16px;
+  }
+  .summary-note-card .note-title { font-size: 13px; font-weight: 700; color: var(--summary-title); margin-bottom: 8px; }
+  .summary-note-card .note-sub-title { font-size: 12.5px; font-weight: 700; color: var(--summary-title); margin: 8px 0 2px; }
+  .summary-note-card .note-sub-title:first-child { margin-top: 0; }
+  .summary-note-card .note-bullet { font-size: 12.5px; line-height: 1.6; color: var(--summary-text); padding-left: 12px; position: relative; }
+  .summary-note-card .note-bullet::before { content: '·'; position: absolute; left: 0; }
 
   .check-btn {
     width: calc(100% - 28px); margin: 10px 14px 0; padding: 13px;
@@ -862,6 +877,7 @@ function beginReview(questions, mode = 'review') {
   document.getElementById('timer').style.display = 'none';
   renderQ();
   goTo('screen-exam');
+  loadSummaryNotes(QUESTIONS);
 }
 function startWrongReview() {
   const notes = Object.values(getWrongNotes());
@@ -960,6 +976,45 @@ async function fetchAllQuestions(dbKeys) {
   return all;
 }
 
+/* ── 요약노트 fetch (Vercel API 경유) ── */
+const notesCache = new Map(); // subject -> parsed note[]
+let SUMMARY_NOTES = [];
+async function fetchSummaryNotesForSubject(subject) {
+  let all = [], hasMore = true, cursor;
+  let pages = 0;
+  while (hasMore && pages < 4) {
+    const body = { subjects: [subject] };
+    if (cursor) body.cursor = cursor;
+    const res = await fetch('/api/summary-notes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    all = all.concat(data.results || []);
+    hasMore = data.has_more;
+    cursor = data.next_cursor;
+    pages++;
+  }
+  return all.map(parseSummaryNote);
+}
+async function loadSummaryNotes(questions) {
+  const subjects = [...new Set(questions.map(q => q.subject).filter(Boolean))];
+  const missing = subjects.filter(s => !notesCache.has(s));
+  if (missing.length > 0) {
+    await Promise.all(missing.map(async (s) => {
+      notesCache.set(s, await fetchSummaryNotesForSubject(s));
+    }));
+    SUMMARY_NOTES = [].concat(...notesCache.values());
+    if (document.getElementById('screen-exam')?.classList.contains('active')) renderQ();
+  }
+}
+function findNoteFor(q) {
+  const qKeywords = q.keywords || [];
+  return SUMMARY_NOTES.find(n => n.subject === q.subject && n.keywords.some(k => qKeywords.includes(k)));
+}
+
 function parsePage(page) {
   const p = page.properties;
   const get = (prop) => {
@@ -968,6 +1023,7 @@ function parsePage(page) {
     if (prop.type === 'rich_text') return prop.rich_text?.[0]?.plain_text || '';
     if (prop.type === 'select')    return prop.select?.name || '';
     if (prop.type === 'checkbox')  return !!prop.checkbox;
+    if (prop.type === 'multi_select') return (prop.multi_select || []).map(o => o.name);
     return '';
   };
   const q   = get(p['문제']);
@@ -987,7 +1043,52 @@ function parsePage(page) {
     difficulty: get(p['난이도']), q,
     opts, optExps,
     answer: parseInt(get(p['정답']) || '1') - 1,
-    exp: get(p['해설'])
+    exp: get(p['해설']),
+    keywords: get(p['관련키워드']) || []
+  };
+}
+
+/* ── 요약노트 파싱 ── */
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+function richTextToHtml(richText) {
+  return (richText || []).map(rt => {
+    const text = escapeHtml(rt.plain_text || '');
+    return rt.annotations?.bold ? `<strong>${text}</strong>` : text;
+  }).join('');
+}
+function parseNoteBlocks(blocks) {
+  return (blocks || []).map(block => {
+    if (block.type === 'paragraph') {
+      const rt = block.paragraph?.rich_text || [];
+      const isFullyBold = rt.length > 0 && rt.every(r => r.annotations?.bold);
+      const html = richTextToHtml(rt);
+      return isFullyBold
+        ? `<div class="note-sub-title">${html}</div>`
+        : `<div class="note-bullet">${html}</div>`;
+    }
+    if (block.type === 'bulleted_list_item') {
+      return `<div class="note-bullet">${richTextToHtml(block.bulleted_list_item?.rich_text)}</div>`;
+    }
+    return '';
+  }).join('');
+}
+function parseSummaryNote(entry) {
+  const p = entry.page.properties;
+  const get = (prop) => {
+    if (!prop) return '';
+    if (prop.type === 'title')     return prop.title?.[0]?.plain_text || '';
+    if (prop.type === 'select')    return prop.select?.name || '';
+    if (prop.type === 'multi_select') return (prop.multi_select || []).map(o => o.name);
+    return '';
+  };
+  return {
+    id: entry.page.id,
+    title: get(p['제목']),
+    subject: get(p['과목']),
+    keywords: get(p['관련키워드']) || [],
+    bodyHtml: parseNoteBlocks(entry.blocks)
   };
 }
 
@@ -1034,6 +1135,7 @@ async function startExam() {
     updateTimer();
     renderQ();
     goTo('screen-exam');
+    loadSummaryNotes(QUESTIONS);
   } catch(e) {
     if (examMode === 'chapter') {
       goTo('screen-chapter-start');
@@ -1068,6 +1170,7 @@ function resumeExam(mode) {
   updateTimer();
   renderQ();
   goTo('screen-exam');
+  loadSummaryNotes(QUESTIONS);
 }
 const PROGRESS_MODE_LABELS = { mock: 'CBT 기출예상문제', gisul: '기출문제', chapter: '단원별 연습' };
 function progressLabel(snap) {
@@ -1167,6 +1270,14 @@ function renderQ() {
   const checkBtn = (sel !== null && !rev)
     ? `<button class="check-btn" onclick="revealAnswer()">정답 확인하기</button>` : '';
 
+  const note = rev ? findNoteFor(q) : null;
+  const noteHtml = note
+    ? `<div class="summary-note-card">
+        <div class="note-title">📝 ${note.title}</div>
+        ${note.bodyHtml}
+      </div>`
+    : '';
+
   document.getElementById('exam-body').innerHTML = `
     <div class="question-card">
       <div class="q-meta">
@@ -1186,6 +1297,7 @@ function renderQ() {
       <div class="ex-title">📌 해설</div>
       <div class="ex-text">${q.exp || '해설이 없습니다.'}</div>
     </div>
+    ${noteHtml}
   `;
   updateQStrip();
 }
