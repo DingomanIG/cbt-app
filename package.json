@@ -2,5 +2,14 @@
   "name": "korean-cook-cbt",
   "version": "1.0.0",
   "description": "한식조리기능사 필기 CBT 모의고사",
-  "private": true
+  "private": true,
+  "scripts": {
+    "sync": "node scripts/sync-notion-to-supabase.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
+  }
 }

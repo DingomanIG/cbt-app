@@ -946,27 +946,17 @@ function retryFromResult() {
 
 /* ── 문제 fetch (Vercel API 경유) ── */
 async function fetchQuestionsFromDb(dbKey) {
-  let all = [], hasMore = true, cursor;
-  let pages = 0;
-  while (hasMore && pages < 4) {
-    const body = { subjects: selectedSubjects, dbKey };
-    if (cursor) body.cursor = cursor;
-    const res = await fetch('/api/questions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error || '문제 불러오기 실패');
-    }
-    const data = await res.json();
-    all = all.concat(data.results || []);
-    hasMore = data.has_more;
-    cursor = data.next_cursor;
-    pages++;
+  const res = await fetch('/api/questions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ subjects: selectedSubjects, dbKey })
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || '문제 불러오기 실패');
   }
-  return all;
+  const data = await res.json();
+  return data.results || [];
 }
 async function fetchAllQuestions(dbKeys) {
   let all = [];
@@ -980,24 +970,14 @@ async function fetchAllQuestions(dbKeys) {
 let SUMMARY_NOTES = [];
 let summaryNotesLoaded = false;
 async function fetchAllSummaryNotes() {
-  let all = [], hasMore = true, cursor;
-  let pages = 0;
-  while (hasMore && pages < 4) {
-    const body = {};
-    if (cursor) body.cursor = cursor;
-    const res = await fetch('/api/summary-notes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!res.ok) return [];
-    const data = await res.json();
-    all = all.concat(data.results || []);
-    hasMore = data.has_more;
-    cursor = data.next_cursor;
-    pages++;
-  }
-  return all.map(parseSummaryNote);
+  const res = await fetch('/api/summary-notes', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return (data.results || []).map(parseSummaryNote);
 }
 async function loadSummaryNotes() {
   if (summaryNotesLoaded) return;
@@ -1010,80 +990,35 @@ function findNoteFor(q) {
   return SUMMARY_NOTES.find(n => n.keywords.some(k => qKeywords.includes(k)));
 }
 
-function parsePage(page) {
-  const p = page.properties;
-  const get = (prop) => {
-    if (!prop) return '';
-    if (prop.type === 'title')     return prop.title?.[0]?.plain_text || '';
-    if (prop.type === 'rich_text') return prop.rich_text?.[0]?.plain_text || '';
-    if (prop.type === 'select')    return prop.select?.name || '';
-    if (prop.type === 'checkbox')  return !!prop.checkbox;
-    if (prop.type === 'multi_select') return (prop.multi_select || []).map(o => o.name);
-    return '';
-  };
-  const q   = get(p['문제']);
-  const o1  = get(p['보기1']), o2 = get(p['보기2']);
-  const o3  = get(p['보기3']), o4 = get(p['보기4']);
+function parsePage(row) {
+  const q  = row['문제'];
+  const o1 = row['보기1'], o2 = row['보기2'], o3 = row['보기3'], o4 = row['보기4'];
   if (!q || !o1 || !o2) return null;
-  if (get(p['반영금지']) === true) return null;
 
   const rawOpts = [o1, o2, o3, o4];
-  const rawExps = [get(p['보기1_해설']), get(p['보기2_해설']), get(p['보기3_해설']), get(p['보기4_해설'])];
+  const rawExps = [row['보기1_해설'], row['보기2_해설'], row['보기3_해설'], row['보기4_해설']];
   const opts = [], optExps = [];
-  rawOpts.forEach((o, i) => { if (o) { opts.push(o); optExps.push(rawExps[i]); } });
+  rawOpts.forEach((o, i) => { if (o) { opts.push(o); optExps.push(rawExps[i] || ''); } });
 
   return {
-    id: page.id,
-    subject: get(p['과목']), chapter: get(p['챕터']),
-    difficulty: get(p['난이도']), q,
+    id: row.id,
+    subject: row['과목'] || '', chapter: row['챕터'] || '',
+    difficulty: row['난이도'] || '', q,
     opts, optExps,
-    answer: parseInt(get(p['정답']) || '1') - 1,
-    exp: get(p['해설']),
-    keywords: get(p['관련키워드']) || []
+    answer: (row['정답'] || 1) - 1,
+    exp: row['해설'] || '',
+    keywords: row['관련키워드'] || []
   };
 }
 
 /* ── 요약노트 파싱 ── */
-function escapeHtml(s) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-function richTextToHtml(richText) {
-  return (richText || []).map(rt => {
-    const text = escapeHtml(rt.plain_text || '');
-    return rt.annotations?.bold ? `<strong>${text}</strong>` : text;
-  }).join('');
-}
-function parseNoteBlocks(blocks) {
-  return (blocks || []).map(block => {
-    if (block.type === 'paragraph') {
-      const rt = block.paragraph?.rich_text || [];
-      const isFullyBold = rt.length > 0 && rt.every(r => r.annotations?.bold);
-      const html = richTextToHtml(rt);
-      return isFullyBold
-        ? `<div class="note-sub-title">${html}</div>`
-        : `<div class="note-bullet">${html}</div>`;
-    }
-    if (block.type === 'bulleted_list_item') {
-      return `<div class="note-bullet">${richTextToHtml(block.bulleted_list_item?.rich_text)}</div>`;
-    }
-    return '';
-  }).join('');
-}
-function parseSummaryNote(entry) {
-  const p = entry.page.properties;
-  const get = (prop) => {
-    if (!prop) return '';
-    if (prop.type === 'title')     return prop.title?.[0]?.plain_text || '';
-    if (prop.type === 'select')    return prop.select?.name || '';
-    if (prop.type === 'multi_select') return (prop.multi_select || []).map(o => o.name);
-    return '';
-  };
+function parseSummaryNote(row) {
   return {
-    id: entry.page.id,
-    title: get(p['제목']),
-    subject: get(p['과목']),
-    keywords: get(p['관련키워드']) || [],
-    bodyHtml: parseNoteBlocks(entry.blocks)
+    id: row.id,
+    title: row['제목'] || '',
+    subject: row['과목'] || '',
+    keywords: row['관련키워드'] || [],
+    bodyHtml: row.content_html || ''
   };
 }
 
