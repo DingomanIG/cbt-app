@@ -88,8 +88,10 @@ function getProp(props, name) {
   const p = props[name];
   if (!p) return null;
   switch (p.type) {
-    case 'title': return p.title?.[0]?.plain_text ?? '';
-    case 'rich_text': return p.rich_text?.[0]?.plain_text ?? '';
+    // Notion은 서식이 바뀌는 지점마다 조각을 나누므로 전부 이어붙인다.
+    // (첫 조각만 읽으면 일부만 굵게 처리한 해설의 뒷부분이 통째로 사라진다)
+    case 'title': return (p.title || []).map((t) => t.plain_text).join('');
+    case 'rich_text': return (p.rich_text || []).map((t) => t.plain_text).join('');
     case 'select': return p.select?.name ?? null;
     case 'checkbox': return !!p.checkbox;
     case 'multi_select': return (p.multi_select || []).map((o) => o.name);

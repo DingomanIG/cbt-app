@@ -649,56 +649,77 @@ const DB_KEYS_BY_MODE = {
   gisul: ['gisul'],
 };
 
+/* ── HTML 이스케이프 ──
+   문제/보기/해설은 Notion의 plain text이므로 텍스트로만 삽입한다.
+   유일하게 HTML로 넣는 값은 요약노트 content_html이며, 동기화 시점에 이미 이스케이프된다. */
+const HTML_ESCAPES = { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' };
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => HTML_ESCAPES[c]); }
+
+/* ── localStorage 읽기/쓰기 ──
+   손상된 값이나 용량 초과가 화면 전체를 깨뜨리지 않도록 여기서 흡수한다. */
+function readStore(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw === null) return fallback;
+    const value = JSON.parse(raw);
+    if (value === null || typeof value !== 'object') return fallback;
+    if (Array.isArray(value) !== Array.isArray(fallback)) return fallback;
+    return value;
+  } catch(e) { return fallback; }
+}
+function writeStore(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); return true; }
+  catch(e) { return false; } // 용량 초과 등 — 저장만 실패하고 풀이는 계속된다
+}
+
 /* ── 오답노트 저장소 (localStorage) ── */
 const WRONG_NOTES_KEY = 'wrongNotes';
-function getWrongNotes() {
-  try { return JSON.parse(localStorage.getItem(WRONG_NOTES_KEY) || '{}'); }
-  catch(e) { return {}; }
-}
+function getWrongNotes() { return readStore(WRONG_NOTES_KEY, {}); }
 function saveWrongNote(q) {
   const notes = getWrongNotes();
   notes[q.id] = q;
-  localStorage.setItem(WRONG_NOTES_KEY, JSON.stringify(notes));
+  writeStore(WRONG_NOTES_KEY, notes);
 }
 function removeWrongNote(id) {
   const notes = getWrongNotes();
   delete notes[id];
-  localStorage.setItem(WRONG_NOTES_KEY, JSON.stringify(notes));
+  writeStore(WRONG_NOTES_KEY, notes);
 }
 
 /* ── 즐겨찾기 저장소 (localStorage) ── */
 const STARRED_KEY = 'starredQuestions';
-function getStarred() {
-  try { return JSON.parse(localStorage.getItem(STARRED_KEY) || '{}'); }
-  catch(e) { return {}; }
-}
+function getStarred() { return readStore(STARRED_KEY, {}); }
 function saveStarred(q) {
   const starred = getStarred();
   starred[q.id] = q;
-  localStorage.setItem(STARRED_KEY, JSON.stringify(starred));
+  writeStore(STARRED_KEY, starred);
 }
 function removeStarred(id) {
   const starred = getStarred();
   delete starred[id];
-  localStorage.setItem(STARRED_KEY, JSON.stringify(starred));
+  writeStore(STARRED_KEY, starred);
 }
 function isStarred(id) { return !!getStarred()[id]; }
 
 /* ── 진행중인 시험 저장소 (localStorage) ── */
 const EXAM_PROGRESS_KEY = 'examProgress';
-function getExamProgress() {
-  try { return JSON.parse(localStorage.getItem(EXAM_PROGRESS_KEY) || '{}'); }
-  catch(e) { return {}; }
+function getExamProgress() { return readStore(EXAM_PROGRESS_KEY, {}); }
+function isValidSnapshot(s) {
+  return !!s && typeof s === 'object'
+    && typeof s.examMode === 'string'
+    && Array.isArray(s.QUESTIONS) && s.QUESTIONS.length > 0
+    && Array.isArray(s.answers) && s.answers.length === s.QUESTIONS.length
+    && Array.isArray(s.revealed) && Array.isArray(s.flagged);
 }
 function saveExamProgress(mode, snapshot) {
   const all = getExamProgress();
   all[mode] = snapshot;
-  localStorage.setItem(EXAM_PROGRESS_KEY, JSON.stringify(all));
+  writeStore(EXAM_PROGRESS_KEY, all);
 }
 function removeExamProgress(mode) {
   const all = getExamProgress();
   delete all[mode];
-  localStorage.setItem(EXAM_PROGRESS_KEY, JSON.stringify(all));
+  writeStore(EXAM_PROGRESS_KEY, all);
 }
 function persistProgress() {
   if (!['mock','gisul','chapter'].includes(examMode)) return;
@@ -711,22 +732,22 @@ function persistProgress() {
 
 /* ── 풀이결과 히스토리 (localStorage) ── */
 const EXAM_HISTORY_KEY = 'examHistory';
-function getExamHistory() {
-  try { return JSON.parse(localStorage.getItem(EXAM_HISTORY_KEY) || '[]'); }
-  catch(e) { return []; }
-}
+function getExamHistory() { return readStore(EXAM_HISTORY_KEY, []); }
 function addExamHistory(record) {
   const hist = getExamHistory();
   hist.push(record);
-  localStorage.setItem(EXAM_HISTORY_KEY, JSON.stringify(hist));
+  writeStore(EXAM_HISTORY_KEY, hist);
 }
 function computeCumulativeStats() {
-  const history = getExamHistory();
+  // 예전 버전이 남긴 기록이나 손상된 항목이 통계 화면을 깨뜨리지 않도록 건너뛴다
+  const history = getExamHistory().filter(h =>
+    h && Number.isFinite(h.correct) && Number.isFinite(h.total) && h.total > 0);
   let totalOk = 0, totalCount = 0;
   const subjTotals = {};
   history.forEach(h => {
     totalOk += h.correct; totalCount += h.total;
-    Object.entries(h.subjMap).forEach(([subj, d]) => {
+    Object.entries(h.subjMap || {}).forEach(([subj, d]) => {
+      if (!d || !Number.isFinite(d.ok) || !Number.isFinite(d.total) || d.total <= 0) return;
       if (!subjTotals[subj]) subjTotals[subj] = { ok: 0, total: 0 };
       subjTotals[subj].ok += d.ok;
       subjTotals[subj].total += d.total;
@@ -749,7 +770,7 @@ function renderResultsScreen() {
     const pct = Math.round(d.ok / d.total * 100);
     const c = SUBJ_COLOR[subj] || '#6B7280';
     return `<div class="subject-row">
-      <div class="s-name" style="color:${c}">${subj}</div>
+      <div class="s-name" style="color:${c}">${esc(subj)}</div>
       <div class="s-bar"><div class="s-fill" style="width:${pct}%;background:${c}"></div></div>
       <div class="s-pct" style="color:${c}">${pct}%</div>
     </div>`;
@@ -860,9 +881,9 @@ function renderWrongNoteList() {
   }
   const items = notes.map(n => {
     const c = SUBJ_COLOR[n.subject] || '#6B7280';
-    return `<div class="detail-card wrong-item" onclick="startSingleWrongReview('${n.id}')">
-      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${n.subject}</div>
-      <div style="font-size:13px;font-weight:500;line-height:1.5">${n.q}</div>
+    return `<div class="detail-card wrong-item" data-id="${esc(n.id)}">
+      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${esc(n.subject)}</div>
+      <div style="font-size:13px;font-weight:500;line-height:1.5">${esc(n.q)}</div>
     </div>`;
   }).join('');
   body.innerHTML = `
@@ -919,9 +940,9 @@ function renderStarList() {
   }
   const items = notes.map(n => {
     const c = SUBJ_COLOR[n.subject] || '#6B7280';
-    return `<div class="detail-card star-item" onclick="startSingleStarReview('${n.id}')">
-      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${n.subject}</div>
-      <div style="font-size:13px;font-weight:500;line-height:1.5">${n.q}</div>
+    return `<div class="detail-card star-item" data-id="${esc(n.id)}">
+      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${esc(n.subject)}</div>
+      <div style="font-size:13px;font-weight:500;line-height:1.5">${esc(n.q)}</div>
     </div>`;
   }).join('');
   body.innerHTML = `
@@ -1076,13 +1097,13 @@ async function startExam() {
   } catch(e) {
     if (examMode === 'chapter') {
       goTo('screen-chapter-start');
-      document.getElementById('error-area-ch').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
+      document.getElementById('error-area-ch').innerHTML = `<div class="error-box">⚠️ ${esc(e.message)}</div>`;
     } else if (examMode === 'gisul') {
       goTo('screen-gisul-start');
-      document.getElementById('error-area-gisul').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
+      document.getElementById('error-area-gisul').innerHTML = `<div class="error-box">⚠️ ${esc(e.message)}</div>`;
     } else {
       goTo('screen-start');
-      document.getElementById('error-area').innerHTML = `<div class="error-box">⚠️ ${e.message}</div>`;
+      document.getElementById('error-area').innerHTML = `<div class="error-box">⚠️ ${esc(e.message)}</div>`;
     }
   }
 }
@@ -1090,16 +1111,16 @@ async function startExam() {
 /* ── 진행중인 시험 이어풀기 ── */
 function resumeExam(mode) {
   const snap = getExamProgress()[mode];
-  if (!snap) return;
+  if (!isValidSnapshot(snap)) { removeExamProgress(mode); renderInProgressCards(); return; }
   examMode = snap.examMode;
-  selectedSubjects = snap.selectedSubjects;
-  selectedCount = snap.selectedCount;
+  selectedSubjects = Array.isArray(snap.selectedSubjects) ? snap.selectedSubjects : [];
+  selectedCount = Number(snap.selectedCount) || snap.QUESTIONS.length;
   QUESTIONS = snap.QUESTIONS;
   answers = snap.answers;
   revealed = snap.revealed;
   flagged = snap.flagged;
-  currentQ = snap.currentQ;
-  timerSec = snap.timerSec;
+  currentQ = Number.isInteger(snap.currentQ) && snap.currentQ < snap.QUESTIONS.length ? snap.currentQ : 0;
+  timerSec = Number.isFinite(snap.timerSec) ? snap.timerSec : snap.QUESTIONS.length * 60;
 
   document.getElementById('timer').style.display = '';
   clearInterval(timerInt);
@@ -1120,24 +1141,31 @@ function progressLabel(snap) {
 }
 function renderInProgressCards() {
   const container = document.getElementById('home-progress');
-  const sessions = Object.values(getExamProgress())
-    .filter(s => s.answers.filter(a => a !== null).length > 0)
-    .sort((a,b) => b.savedAt - a.savedAt)
-    .slice(0, 2);
-  if (sessions.length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
-  container.style.display = '';
-  container.innerHTML = `
-    <div class="section-title">진행중인 문제</div>
-    <div class="progress-cards">
-      ${sessions.map(s => {
-        const answered = s.answers.filter(a => a !== null).length;
-        return `<div class="progress-card" onclick="resumeExam('${s.examMode}')">
-          <div class="p-title">${PROGRESS_MODE_LABELS[s.examMode] || ''}</div>
-          <div class="p-sub">${progressLabel(s)}</div>
-          <div class="p-progress">풀이중 <b>${answered}/${s.QUESTIONS.length}</b></div>
-        </div>`;
-      }).join('')}
-    </div>`;
+  // 홈은 모든 화면의 복귀 지점이므로, 저장된 값이 무엇이든 여기서 화면이 멈추면 안 된다
+  try {
+    const sessions = Object.values(getExamProgress())
+      .filter(isValidSnapshot)
+      .filter(s => s.answers.filter(a => a !== null).length > 0)
+      .sort((a,b) => (b.savedAt || 0) - (a.savedAt || 0))
+      .slice(0, 2);
+    if (sessions.length === 0) { container.style.display = 'none'; container.innerHTML = ''; return; }
+    container.style.display = '';
+    container.innerHTML = `
+      <div class="section-title">진행중인 문제</div>
+      <div class="progress-cards">
+        ${sessions.map(s => {
+          const answered = s.answers.filter(a => a !== null).length;
+          return `<div class="progress-card" data-mode="${esc(s.examMode)}">
+            <div class="p-title">${esc(PROGRESS_MODE_LABELS[s.examMode] || '')}</div>
+            <div class="p-sub">${esc(progressLabel(s))}</div>
+            <div class="p-progress">풀이중 <b>${answered}/${s.QUESTIONS.length}</b></div>
+          </div>`;
+        }).join('')}
+      </div>`;
+  } catch(e) {
+    container.style.display = 'none';
+    container.innerHTML = '';
+  }
 }
 
 /* ── 타이머 ── */
@@ -1193,13 +1221,13 @@ function renderQ() {
     } else if (i === sel)        { cls += ' selected'; }
 
     const explainHtml = rev
-      ? `<div class="opt-explain ${state}">${(q.optExps && q.optExps[i]) || '이 보기에 대한 해설이 아직 준비되지 않았습니다.'}</div>`
+      ? `<div class="opt-explain ${state}">${esc((q.optExps && q.optExps[i]) || '이 보기에 대한 해설이 아직 준비되지 않았습니다.')}</div>`
       : '';
 
     return `<div class="opt-block">
       <div class="${cls}" onclick="selectOpt(${i})">
         <div class="opt-num">${i+1}</div>
-        <div class="opt-text">${o}</div>${icon}
+        <div class="opt-text">${esc(o)}</div>${icon}
       </div>${explainHtml}
     </div>`;
   }).join('');
@@ -1208,9 +1236,10 @@ function renderQ() {
     ? `<button class="check-btn" onclick="revealAnswer()">정답 확인하기</button>` : '';
 
   const note = rev ? findNoteFor(q) : null;
+  // bodyHtml만 유일하게 HTML로 삽입한다 (동기화 시점에 이스케이프된 값)
   const noteHtml = note
     ? `<div class="summary-note-card">
-        <div class="note-title">📝 ${note.title}</div>
+        <div class="note-title">📝 ${esc(note.title)}</div>
         ${note.bodyHtml}
       </div>`
     : '';
@@ -1219,20 +1248,20 @@ function renderQ() {
     <div class="question-card">
       <div class="q-meta">
         <div class="q-num">${currentQ+1}</div>
-        <div class="q-subject" style="color:${sc};background:${sc}18">${q.subject}</div>
-        <div class="q-diff" style="color:${dc}">난이도 ${q.difficulty}</div>
+        <div class="q-subject" style="color:${sc};background:${sc}18">${esc(q.subject)}</div>
+        <div class="q-diff" style="color:${dc}">난이도 ${esc(q.difficulty)}</div>
         <div style="margin-left:auto;display:flex;gap:6px;">
           <div class="star-btn ${isStarred(q.id) ? 'active' : ''}" onclick="toggleStar()">${isStarred(q.id) ? '⭐' : '☆'}</div>
           <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()">${flagged[currentQ] ? '🚩' : '🏳️'}</div>
         </div>
       </div>
-      <div class="question-text">${q.q}</div>
+      <div class="question-text">${esc(q.q)}</div>
     </div>
     <div class="options-list">${optsHtml}</div>
     ${checkBtn}
     <div class="explanation-card ${rev ? 'show' : ''}">
       <div class="ex-title">📌 해설</div>
-      <div class="ex-text">${q.exp || '해설이 없습니다.'}</div>
+      <div class="ex-text">${esc(q.exp || '해설이 없습니다.')}</div>
     </div>
     ${noteHtml}
   `;
@@ -1344,7 +1373,7 @@ function finishExam() {
     const pct = Math.round(d.ok/d.total*100);
     const c = SUBJ_COLOR[sub]||'#6B7280';
     return `<div class="subject-row">
-      <div class="s-name" style="color:${c}">${sub}</div>
+      <div class="s-name" style="color:${c}">${esc(sub)}</div>
       <div class="s-bar"><div class="s-fill" style="width:${pct}%;background:${c}"></div></div>
       <div class="s-pct" style="color:${c}">${pct}%</div>
     </div>`;
@@ -1352,6 +1381,19 @@ function finishExam() {
 
   goTo('screen-result');
 }
+
+/* ── 목록 클릭 처리 ──
+   렌더링되는 값(문항 id, 모드명)을 onclick 문자열에 끼워넣지 않기 위해
+   data 속성 + 이벤트 위임을 쓴다. */
+function delegate(containerId, selector, handler) {
+  document.getElementById(containerId).addEventListener('click', (e) => {
+    const el = e.target.closest(selector);
+    if (el) handler(el);
+  });
+}
+delegate('wrong-note-body', '.wrong-item', el => startSingleWrongReview(el.dataset.id));
+delegate('star-list-body',  '.star-item',  el => startSingleStarReview(el.dataset.id));
+delegate('home-progress',   '.progress-card', el => resumeExam(el.dataset.mode));
 
 /* ── 문제 번호 바 마우스 드래그 스크롤 ── */
 (function() {
