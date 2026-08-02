@@ -6,6 +6,11 @@ const TABLES = {
   gisul: 'questions_gisul',
 };
 
+/* 문항 id는 테이블마다 별개이므로, 계정에 저장할 때 어느 테이블에서 왔는지 함께 남긴다 */
+const SOURCE_BY_TABLE = Object.fromEntries(
+  Object.entries(TABLES).map(([source, table]) => [table, source])
+);
+
 /* 클라이언트가 실제로 쓰는 컬럼만 반환 */
 const COLUMNS = [
   'id', '과목', '챕터', '난이도', '문제',
@@ -58,6 +63,29 @@ function chunk(arr, size) {
   return out;
 }
 
+/* 계정에는 문항 본문이 아니라 참조(source + id)만 저장하므로,
+   오답노트·즐겨찾기를 다른 기기에서 열 때 본문을 여기서 받아온다. */
+async function fetchByIds(supabase, refs) {
+  const byTable = new Map();
+  for (const ref of refs) {
+    const table = ref && typeof ref === 'object' ? TABLES[ref.source] : undefined;
+    if (!table || typeof ref.id !== 'string') continue;
+    if (!byTable.has(table)) byTable.set(table, []);
+    byTable.get(table).push(ref.id);
+  }
+
+  const queries = [];
+  byTable.forEach((ids, table) => {
+    chunk([...new Set(ids)].slice(0, MAX_COUNT), IN_CHUNK).forEach((part) => {
+      queries.push(
+        supabase.from(table).select(COLUMNS).in('id', part)
+          .then((r) => ({ ...r, source: SOURCE_BY_TABLE[table] }))
+      );
+    });
+  });
+  return Promise.all(queries);
+}
+
 export default async function handler(req, res) {
   // 프런트엔드와 동일 출처에서만 호출하므로 CORS 허용 헤더를 두지 않는다
   res.setHeader('Cache-Control', 'no-store');
@@ -66,6 +94,21 @@ export default async function handler(req, res) {
 
   try {
     const body = typeof req.body === 'object' && req.body !== null ? req.body : {};
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
+    }
+
+    // id 목록으로 조회 (오답노트·즐겨찾기 복원)
+    if (Array.isArray(body.ids)) {
+      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+      const responses = await fetchByIds(supabase, body.ids.slice(0, MAX_COUNT));
+      const failed = responses.find((r) => r.error);
+      if (failed) return res.status(500).json({ error: failed.error.message });
+      return res.status(200).json({
+        results: responses.flatMap((r) => r.data.map((row) => ({ ...row, source: r.source }))),
+      });
+    }
 
     const rawKeys = Array.isArray(body.dbKeys) && body.dbKeys.length > 0 ? body.dbKeys : ['mock'];
     const tables = rawKeys.map((k) => (typeof k === 'string' ? TABLES[k] : undefined));
@@ -81,10 +124,6 @@ export default async function handler(req, res) {
     const count = Number.isFinite(requested) && requested > 0
       ? Math.min(Math.floor(requested), MAX_COUNT)
       : MAX_COUNT;
-
-    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
-    }
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -110,7 +149,10 @@ export default async function handler(req, res) {
     const queries = [];
     byTable.forEach((ids, table) => {
       chunk(ids, IN_CHUNK).forEach((part) => {
-        queries.push(supabase.from(table).select(COLUMNS).in('id', part));
+        queries.push(
+          supabase.from(table).select(COLUMNS).in('id', part)
+            .then((r) => ({ ...r, source: SOURCE_BY_TABLE[table] }))
+        );
       });
     });
     const responses = await Promise.all(queries);
@@ -118,7 +160,9 @@ export default async function handler(req, res) {
     const failed = responses.find((r) => r.error);
     if (failed) return res.status(500).json({ error: failed.error.message });
 
-    return res.status(200).json({ results: responses.flatMap((r) => r.data) });
+    return res.status(200).json({
+      results: responses.flatMap((r) => r.data.map((row) => ({ ...row, source: r.source }))),
+    });
   } catch (e) {
     return res.status(500).json({ error: e.message || '문제를 불러오지 못했습니다' });
   }

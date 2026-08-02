@@ -60,6 +60,19 @@
     padding: 52px 24px 28px;
     color: #fff;
   }
+  .account-bar {
+    display: flex; align-items: center; justify-content: flex-end;
+    gap: 8px; margin-bottom: 10px; min-height: 26px; flex-wrap: wrap;
+  }
+  .account-bar .acct-who { font-size: 11px; opacity: .8; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .account-bar .acct-msg { font-size: 11px; opacity: .8; margin-right: auto; }
+  .account-bar .acct-btn {
+    background: rgba(255,255,255,.16); color: #fff;
+    border: none; border-radius: 20px; padding: 5px 12px;
+    font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  .account-bar .acct-btn:active { transform: scale(.97); }
+
   .home-header .badge {
     display: inline-flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,.15);
@@ -381,6 +394,7 @@
   <!-- 홈 -->
   <div class="screen active" id="screen-home">
     <div class="home-header">
+      <div class="account-bar" id="account-bar"></div>
       <div class="badge">🍳 한식조리기능사</div>
       <h1>필기 CBT<br>기출예상문제</h1>
       <p>실제 출제 예상 문제로 합격을 준비하세요</p>
@@ -628,6 +642,7 @@
   </div>
 
 </div>
+<script src="/vendor/supabase.js"></script>
 <script>
 /* ── 상수 ── */
 const SUBJ_COLOR = {
@@ -648,6 +663,217 @@ const DB_KEYS_BY_MODE = {
   chapter: ['mock', 'gisul_yesang'],
   gisul: ['gisul'],
 };
+
+/* ── 계정 (Supabase Auth) ──
+   로그인은 선택이다. 비로그인 상태에서는 지금까지처럼 localStorage를 쓰고,
+   로그인하면 기기에 있던 기록을 계정으로 옮긴 뒤 계정 저장소를 쓴다.
+   공개키는 클라이언트에 노출되도록 설계된 키이며, 문제 테이블에는 접근 권한이 없다
+   (문제는 /api/questions 서버 경유로만 나간다). */
+const SUPABASE_URL = 'https://usveeckdaaeetyvbxzmh.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_WI5rp_o_6dCPdPT82n4WNg_qvQPZd50';
+const SB = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+let currentUser = null;
+const ACCOUNT = { marks: new Map(), history: [] }; // 로그인 시 서버에서 채운다
+const QCACHE = new Map();                          // 문항 id → 본문 (계정엔 참조만 저장하므로)
+const isSignedIn = () => currentUser !== null;
+
+/* 서버 반영은 화면을 막지 않는다. 순서 보장을 위해 한 줄로 이어 붙인다. */
+let remoteChain = Promise.resolve();
+function queueRemote(fn) {
+  remoteChain = remoteChain
+    .then(fn)
+    .then(r => { if (r && r.error) console.warn('계정 동기화 실패:', r.error.message); })
+    .catch(e => console.warn('계정 동기화 실패:', e.message || e));
+  return remoteChain;
+}
+
+function marksAsNotes(flag) {
+  const out = {};
+  ACCOUNT.marks.forEach((m, id) => {
+    if (!m[flag]) return;
+    const q = QCACHE.get(id);
+    if (q) out[id] = q;
+  });
+  return out;
+}
+
+function setMark(q, flag, on) {
+  const id = q && q.id;
+  if (!id) return;
+  const prev = ACCOUNT.marks.get(id) || { source: q.source, is_wrong: false, is_starred: false };
+  const next = { ...prev, [flag]: on, source: q.source || prev.source };
+  if (q.opts) QCACHE.set(id, q); // 목록 렌더에 쓸 본문 확보
+
+  if (!next.is_wrong && !next.is_starred) {
+    ACCOUNT.marks.delete(id);
+    queueRemote(() => SB.from('user_question_marks').delete().eq('question_id', id));
+  } else {
+    ACCOUNT.marks.set(id, next);
+    queueRemote(() => SB.from('user_question_marks').upsert({
+      user_id: currentUser.id, question_id: id, source: next.source,
+      is_wrong: next.is_wrong, is_starred: next.is_starred,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,question_id' }));
+  }
+}
+
+/* 계정엔 문항 참조만 있으므로 본문은 서버에서 받아 캐시한다 */
+async function hydrateQuestionCache(refs) {
+  const missing = refs.filter(r => r.source && !QCACHE.has(r.id));
+  for (let i = 0; i < missing.length; i += 400) {
+    const res = await fetch('/api/questions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: missing.slice(i, i + 400) }),
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    (data.results || []).map(parsePage).filter(Boolean).forEach(q => QCACHE.set(q.id, q));
+  }
+}
+
+async function loadAccountData() {
+  const [marksRes, histRes] = await Promise.all([
+    SB.from('user_question_marks').select('question_id,source,is_wrong,is_starred'),
+    SB.from('user_exam_history').select('mode,correct,total,score,passed,subj_map,finished_at')
+      .order('finished_at', { ascending: true }),
+  ]);
+  if (marksRes.error) throw new Error(marksRes.error.message);
+  if (histRes.error) throw new Error(histRes.error.message);
+
+  ACCOUNT.marks = new Map(marksRes.data.map(m =>
+    [m.question_id, { source: m.source, is_wrong: m.is_wrong, is_starred: m.is_starred }]));
+  ACCOUNT.history = histRes.data.map(h => ({
+    mode: h.mode, correct: h.correct, total: h.total, score: h.score,
+    pass: h.passed, subjMap: h.subj_map || {},
+    finishedAt: new Date(h.finished_at).getTime(),
+  }));
+  await hydrateQuestionCache([...ACCOUNT.marks].map(([id, m]) => ({ id, source: m.source })));
+}
+
+/* 예전 기기 데이터엔 source가 없다 → 세 테이블에 물어봐 어디 문항인지 알아낸다 */
+async function resolveSources(ids) {
+  const out = new Map();
+  const SOURCES = ['mock', 'gisul_yesang', 'gisul'];
+  for (let i = 0; i < ids.length; i += 150) {
+    const refs = ids.slice(i, i + 150).flatMap(id => SOURCES.map(source => ({ source, id })));
+    const res = await fetch('/api/questions', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: refs }),
+    });
+    if (!res.ok) continue;
+    const data = await res.json();
+    (data.results || []).forEach(r => out.set(r.id, r.source));
+  }
+  return out;
+}
+
+async function migrateLocalData() {
+  const wrong = readStore(WRONG_NOTES_KEY, {});
+  const starred = readStore(STARRED_KEY, {});
+  const history = readStore(EXAM_HISTORY_KEY, []);
+  const localQs = [...Object.values(wrong), ...Object.values(starred)].filter(q => q && q.id);
+  if (localQs.length === 0 && history.length === 0) return 0;
+
+  const unknown = [...new Set(localQs.filter(q => !q.source).map(q => q.id))];
+  const sourceById = unknown.length ? await resolveSources(unknown) : new Map();
+
+  const marks = new Map();
+  const add = (q, flag) => {
+    if (!q || !q.id) return;
+    const source = q.source || sourceById.get(q.id);
+    if (!source) return; // 원본에서 사라진 문항은 건너뛴다
+    const m = marks.get(q.id) || { source, is_wrong: false, is_starred: false };
+    m[flag] = true;
+    marks.set(q.id, m);
+  };
+  Object.values(wrong).forEach(q => add(q, 'is_wrong'));
+  Object.values(starred).forEach(q => add(q, 'is_starred'));
+
+  const markRows = [...marks].map(([question_id, m]) => ({ user_id: currentUser.id, question_id, ...m }));
+  const histRows = history
+    .filter(h => h && Number.isFinite(h.correct) && Number.isFinite(h.total) && h.total > 0)
+    .map(h => ({
+      user_id: currentUser.id,
+      mode: ['mock', 'gisul', 'chapter'].includes(h.mode) ? h.mode : 'mock',
+      correct: h.correct, total: h.total,
+      score: Number.isFinite(h.score) ? h.score : Math.round(h.correct / h.total * 100),
+      passed: !!h.pass, subj_map: h.subjMap || {},
+      finished_at: new Date(h.finishedAt || Date.now()).toISOString(),
+    }));
+
+  if (markRows.length) {
+    const { error } = await SB.from('user_question_marks')
+      .upsert(markRows, { onConflict: 'user_id,question_id' });
+    if (error) throw new Error(error.message);
+  }
+  if (histRows.length) {
+    const { error } = await SB.from('user_exam_history').insert(histRows);
+    if (error) throw new Error(error.message);
+  }
+  // 업로드가 확인된 뒤에만 기기 데이터를 비운다
+  localStorage.removeItem(WRONG_NOTES_KEY);
+  localStorage.removeItem(STARRED_KEY);
+  localStorage.removeItem(EXAM_HISTORY_KEY);
+  return markRows.length + histRows.length;
+}
+
+function renderAccountBar(msg) {
+  const el = document.getElementById('account-bar');
+  if (!el) return;
+  el.innerHTML = isSignedIn()
+    ? `<span class="acct-who">${esc(currentUser.email || '로그인됨')}</span>
+       <button class="acct-btn" data-act="signout">로그아웃</button>`
+    : `<button class="acct-btn" data-act="signin">구글로 로그인</button>`;
+  if (msg) el.insertAdjacentHTML('afterbegin', `<span class="acct-msg">${esc(msg)}</span>`);
+}
+
+async function signIn() {
+  const { error } = await SB.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: location.origin },
+  });
+  if (error) renderAccountBar('로그인 실패');
+}
+async function signOut() {
+  await SB.auth.signOut();
+  currentUser = null;
+  ACCOUNT.marks = new Map();
+  ACCOUNT.history = [];
+  QCACHE.clear();
+  renderAccountBar();
+  renderInProgressCards();
+}
+
+async function onSignedIn(user) {
+  currentUser = user;
+  renderAccountBar('동기화 중…');
+  let moved = 0;
+  try {
+    moved = await migrateLocalData();
+    await loadAccountData();
+  } catch (e) {
+    console.warn('계정 동기화 실패:', e.message);
+    renderAccountBar('동기화 실패');
+    return;
+  }
+  renderAccountBar(moved > 0 ? `${moved}건을 계정으로 옮겼습니다` : '');
+}
+
+async function initAuth() {
+  const { data } = await SB.auth.getSession();
+  if (data.session) await onSignedIn(data.session.user);
+  else renderAccountBar();
+
+  SB.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_IN' && session && (!currentUser || currentUser.id !== session.user.id)) {
+      onSignedIn(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      renderAccountBar();
+    }
+  });
+}
 
 /* ── HTML 이스케이프 ──
    문제/보기/해설은 Notion의 plain text이므로 텍스트로만 삽입한다.
@@ -674,32 +900,43 @@ function writeStore(key, value) {
 
 /* ── 오답노트 저장소 (localStorage) ── */
 const WRONG_NOTES_KEY = 'wrongNotes';
-function getWrongNotes() { return readStore(WRONG_NOTES_KEY, {}); }
+function getWrongNotes() {
+  return isSignedIn() ? marksAsNotes('is_wrong') : readStore(WRONG_NOTES_KEY, {});
+}
 function saveWrongNote(q) {
-  const notes = getWrongNotes();
+  if (isSignedIn()) return setMark(q, 'is_wrong', true);
+  const notes = readStore(WRONG_NOTES_KEY, {});
   notes[q.id] = q;
   writeStore(WRONG_NOTES_KEY, notes);
 }
 function removeWrongNote(id) {
-  const notes = getWrongNotes();
+  if (isSignedIn()) return setMark(QCACHE.get(id) || { id }, 'is_wrong', false);
+  const notes = readStore(WRONG_NOTES_KEY, {});
   delete notes[id];
   writeStore(WRONG_NOTES_KEY, notes);
 }
 
 /* ── 즐겨찾기 저장소 (localStorage) ── */
 const STARRED_KEY = 'starredQuestions';
-function getStarred() { return readStore(STARRED_KEY, {}); }
+function getStarred() {
+  return isSignedIn() ? marksAsNotes('is_starred') : readStore(STARRED_KEY, {});
+}
 function saveStarred(q) {
-  const starred = getStarred();
+  if (isSignedIn()) return setMark(q, 'is_starred', true);
+  const starred = readStore(STARRED_KEY, {});
   starred[q.id] = q;
   writeStore(STARRED_KEY, starred);
 }
 function removeStarred(id) {
-  const starred = getStarred();
+  if (isSignedIn()) return setMark(QCACHE.get(id) || { id }, 'is_starred', false);
+  const starred = readStore(STARRED_KEY, {});
   delete starred[id];
   writeStore(STARRED_KEY, starred);
 }
-function isStarred(id) { return !!getStarred()[id]; }
+function isStarred(id) {
+  if (isSignedIn()) { const m = ACCOUNT.marks.get(id); return !!(m && m.is_starred); }
+  return !!readStore(STARRED_KEY, {})[id];
+}
 
 /* ── 진행중인 시험 저장소 (localStorage) ── */
 const EXAM_PROGRESS_KEY = 'examProgress';
@@ -732,9 +969,21 @@ function persistProgress() {
 
 /* ── 풀이결과 히스토리 (localStorage) ── */
 const EXAM_HISTORY_KEY = 'examHistory';
-function getExamHistory() { return readStore(EXAM_HISTORY_KEY, []); }
+function getExamHistory() {
+  return isSignedIn() ? ACCOUNT.history : readStore(EXAM_HISTORY_KEY, []);
+}
 function addExamHistory(record) {
-  const hist = getExamHistory();
+  if (isSignedIn()) {
+    ACCOUNT.history.push(record);
+    queueRemote(() => SB.from('user_exam_history').insert({
+      user_id: currentUser.id, mode: record.mode,
+      correct: record.correct, total: record.total, score: record.score,
+      passed: record.pass, subj_map: record.subjMap || {},
+      finished_at: new Date(record.finishedAt).toISOString(),
+    }));
+    return;
+  }
+  const hist = readStore(EXAM_HISTORY_KEY, []);
   hist.push(record);
   writeStore(EXAM_HISTORY_KEY, hist);
 }
@@ -1030,6 +1279,7 @@ function parsePage(row) {
 
   return {
     id: row.id,
+    source: row.source, // 계정에 저장할 때 어느 문제 DB인지 알아야 한다
     subject: row['과목'] || '', chapter: row['챕터'] || '',
     difficulty: row['난이도'] || '', q,
     opts, optExps,
@@ -1394,6 +1644,9 @@ function delegate(containerId, selector, handler) {
 delegate('wrong-note-body', '.wrong-item', el => startSingleWrongReview(el.dataset.id));
 delegate('star-list-body',  '.star-item',  el => startSingleStarReview(el.dataset.id));
 delegate('home-progress',   '.progress-card', el => resumeExam(el.dataset.mode));
+delegate('account-bar',     '.acct-btn', el => (el.dataset.act === 'signin' ? signIn() : signOut()));
+
+initAuth();
 
 /* ── 문제 번호 바 마우스 드래그 스크롤 ── */
 (function() {
