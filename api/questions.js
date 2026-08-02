@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { isProRequest } from './_entitlement.js';
 
 const TABLES = {
   mock: 'questions_mock',
@@ -12,12 +13,19 @@ const SOURCE_BY_TABLE = Object.fromEntries(
 );
 
 /* 클라이언트가 실제로 쓰는 컬럼만 반환 */
-const COLUMNS = [
+const BASE_COLUMNS = [
   'id', '과목', '챕터', '난이도', '문제',
   '보기1', '보기2', '보기3', '보기4',
-  '보기1_해설', '보기2_해설', '보기3_해설', '보기4_해설',
   '정답', '해설', '관련키워드',
-].join(',');
+];
+
+/* 보기별 상세해설은 프로 전용이다.
+   무료 사용자에게는 빈 값으로 내려보내는 게 아니라 SELECT 자체에서 뺀다. */
+const PRO_COLUMNS = ['보기1_해설', '보기2_해설', '보기3_해설', '보기4_해설'];
+
+function columnsFor(isPro) {
+  return (isPro ? [...BASE_COLUMNS, ...PRO_COLUMNS] : BASE_COLUMNS).join(',');
+}
 
 const PAGE_SIZE = 1000; // Supabase(PostgREST) 기본 max-rows
 const IN_CHUNK = 100;   // .in() URL 길이 제한 회피
@@ -65,7 +73,7 @@ function chunk(arr, size) {
 
 /* 계정에는 문항 본문이 아니라 참조(source + id)만 저장하므로,
    오답노트·즐겨찾기를 다른 기기에서 열 때 본문을 여기서 받아온다. */
-async function fetchByIds(supabase, refs) {
+async function fetchByIds(supabase, refs, columns) {
   const byTable = new Map();
   for (const ref of refs) {
     const table = ref && typeof ref === 'object' ? TABLES[ref.source] : undefined;
@@ -78,7 +86,7 @@ async function fetchByIds(supabase, refs) {
   byTable.forEach((ids, table) => {
     chunk([...new Set(ids)].slice(0, MAX_COUNT), IN_CHUNK).forEach((part) => {
       queries.push(
-        supabase.from(table).select(COLUMNS).in('id', part)
+        supabase.from(table).select(columns).in('id', part)
           .then((r) => ({ ...r, source: SOURCE_BY_TABLE[table] }))
       );
     });
@@ -99,10 +107,12 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
     }
 
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    const columns = columnsFor(await isProRequest(supabase, req));
+
     // id 목록으로 조회 (오답노트·즐겨찾기 복원)
     if (Array.isArray(body.ids)) {
-      const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-      const responses = await fetchByIds(supabase, body.ids.slice(0, MAX_COUNT));
+      const responses = await fetchByIds(supabase, body.ids.slice(0, MAX_COUNT), columns);
       const failed = responses.find((r) => r.error);
       if (failed) return res.status(500).json({ error: failed.error.message });
       return res.status(200).json({
@@ -124,8 +134,6 @@ export default async function handler(req, res) {
     const count = Number.isFinite(requested) && requested > 0
       ? Math.min(Math.floor(requested), MAX_COUNT)
       : MAX_COUNT;
-
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
     // 1) 후보 id만 모은다 (테이블 전체를 내려받지 않음)
     const idLists = await Promise.all(
@@ -150,7 +158,7 @@ export default async function handler(req, res) {
     byTable.forEach((ids, table) => {
       chunk(ids, IN_CHUNK).forEach((part) => {
         queries.push(
-          supabase.from(table).select(COLUMNS).in('id', part)
+          supabase.from(table).select(columns).in('id', part)
             .then((r) => ({ ...r, source: SOURCE_BY_TABLE[table] }))
         );
       });

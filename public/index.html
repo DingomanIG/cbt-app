@@ -60,20 +60,6 @@
     padding: 52px 24px 28px;
     color: #fff;
   }
-  .account-bar {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 8px; margin-bottom: 10px; min-height: 26px; flex-wrap: wrap;
-  }
-  .account-bar .acct-who { font-size: 11px; opacity: .8; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .account-bar .acct-msg { font-size: 11px; opacity: .8; margin-right: auto; }
-  .account-bar .acct-btn {
-    background: rgba(255,255,255,.16); color: #fff;
-    border: none; border-radius: 20px; padding: 5px 12px;
-    font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer;
-  }
-  .account-bar .acct-btn:active { transform: scale(.97); }
-  .account-bar .acct-btn.kakao { background: #FEE500; color: #191600; }
-
   .home-header .badge {
     display: inline-flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,.15);
@@ -387,6 +373,102 @@
     border-radius: 14px; padding: 16px; margin-bottom: 16px;
     font-size: 13px; color: var(--wrong); text-align: center; line-height: 1.6;
   }
+
+  /* ── 하단 탭 바 ──
+     시험 화면은 하단을 .exam-nav가 이미 쓰므로 그때는 감춘다. */
+  .tab-bar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 390px; z-index: 20;
+    background: var(--card); border-top: 1px solid var(--border);
+    display: none; padding: 7px 0 max(10px, env(safe-area-inset-bottom));
+  }
+  .tab-bar.show { display: flex; }
+  .phone-wrap.has-tabbar { padding-bottom: 72px; }
+  .tab-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 3px 0; background: none; border: none;
+    font-family: inherit; color: var(--text-sub); cursor: pointer;
+  }
+  .tab-item .t-icon { font-size: 18px; line-height: 1; filter: grayscale(1); opacity: .55; }
+  .tab-item .t-label { font-size: 10px; font-weight: 600; }
+  .tab-item.active { color: var(--primary); }
+  .tab-item.active .t-icon { filter: none; opacity: 1; }
+  .tab-item:active { transform: scale(.95); }
+
+  /* ── 설정 ── */
+  .account-card {
+    background: var(--primary); color: #fff;
+    border-radius: 16px; padding: 16px 18px;
+  }
+  .account-card .a-label { font-size: 11px; opacity: .7; }
+  .account-card .a-name {
+    font-size: 15px; font-weight: 700; margin-top: 2px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .account-card .a-msg { font-size: 11px; opacity: .8; margin-top: 8px; line-height: 1.5; }
+  .account-card .a-actions { display: flex; gap: 8px; margin-top: 13px; }
+  .acct-btn {
+    background: rgba(255,255,255,.18); color: #fff;
+    border: none; border-radius: 20px; padding: 9px 15px;
+    font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+  }
+  .acct-btn:active { transform: scale(.97); }
+  .acct-btn.kakao { background: #FEE500; color: #191600; }
+
+  .settings-list { display: flex; flex-direction: column; gap: 8px; }
+  .settings-row {
+    width: 100%; background: var(--card); border: none; border-radius: 14px;
+    padding: 15px 16px; display: flex; align-items: center; gap: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05); cursor: pointer;
+    font-size: 14px; font-weight: 600; font-family: inherit;
+    color: var(--text); text-align: left; text-decoration: none;
+  }
+  .settings-row:active { transform: scale(.99); }
+  .settings-row .s-right { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--text-sub); }
+  .settings-row.pro { border: 2px solid var(--accent); }
+  .settings-row.pro .s-right { color: var(--accent); }
+  .settings-row.danger { color: var(--wrong); }
+  .settings-row.static { cursor: default; }
+  .settings-hint { font-size: 11.5px; color: var(--text-sub); line-height: 1.6; padding: 4px 4px 0; }
+
+  /* ── 프로 버전 ── */
+  .pro-hero {
+    background: linear-gradient(155deg, #F7B733 0%, #F08A3C 100%);
+    color: #fff; border-radius: 18px; padding: 22px 20px; text-align: center;
+  }
+  .pro-hero .p-kicker { font-size: 12.5px; font-weight: 600; opacity: .9; }
+  .pro-hero .p-head { font-size: 20px; font-weight: 700; margin-top: 5px; }
+  .pro-hero .p-price { margin-top: 14px; font-size: 30px; font-weight: 700; }
+  .pro-hero .p-price s { font-size: 15px; font-weight: 400; opacity: .7; margin-right: 8px; }
+  .pro-hero .p-price small { font-size: 13px; font-weight: 600; }
+
+  .pro-benefit {
+    background: var(--card); border-radius: 14px; padding: 15px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+  }
+  .pro-benefit h5 { font-size: 14px; font-weight: 700; }
+  .pro-benefit p { font-size: 12.5px; line-height: 1.6; color: var(--text-sub); margin-top: 5px; }
+  .pro-benefit .cmp { display: flex; gap: 8px; margin-top: 10px; font-size: 11.5px; flex-wrap: wrap; }
+  .pro-benefit .cmp span { border-radius: 8px; padding: 4px 9px; }
+  .pro-benefit .cmp .free { background: var(--neutral-bg); color: var(--neutral-text); }
+  .pro-benefit .cmp .paid { background: var(--accent-lt); color: #B8830A; font-weight: 700; }
+
+  .btn-upgrade {
+    flex: 1; padding: 17px; border: none; border-radius: 14px;
+    background: var(--accent); color: #fff;
+    font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  .btn-upgrade:disabled { background: var(--border); color: var(--text-sub); cursor: default; }
+
+  /* 프로 전용 콘텐츠 자리에 놓이는 잠금 안내 */
+  .lock-card {
+    background: var(--accent-lt); border: 1px dashed var(--accent);
+    border-radius: 14px; margin: 10px 14px 0; padding: 14px 16px;
+    text-align: center; cursor: pointer;
+  }
+  .lock-card:active { transform: scale(.99); }
+  .lock-card .l-title { font-size: 13px; font-weight: 700; color: #B8830A; }
+  .lock-card .l-sub { font-size: 11.5px; color: #9A7212; margin-top: 4px; line-height: 1.5; }
 </style>
 </head>
 <body>
@@ -395,7 +477,6 @@
   <!-- 홈 -->
   <div class="screen active" id="screen-home">
     <div class="home-header">
-      <div class="account-bar" id="account-bar"></div>
       <div class="badge">🍳 한식조리기능사</div>
       <h1>필기 CBT<br>기출예상문제</h1>
       <p>실제 출제 예상 문제로 합격을 준비하세요</p>
@@ -441,7 +522,67 @@
     </div>
   </div>
 
-  <!-- 설정 -->
+  <!-- 문제풀이 (하단 탭) -->
+  <div class="screen" id="screen-practice">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>문제풀이</h2>
+        <p>원하는 방식으로 문제를 풀어보세요</p>
+      </div>
+      <div class="start-body">
+        <div class="home-menu" style="padding:0">
+          <div class="menu-card featured" onclick="goToMockStart()">
+            <div class="icon">📝</div>
+            <div class="info"><h3>CBT 기출예상문제</h3><p>실제 문제로 시험 연습</p></div>
+            <div class="arrow">›</div>
+          </div>
+          <div class="menu-card" onclick="goToGisulStart()">
+            <div class="icon">🎯</div>
+            <div class="info"><h3>기출문제</h3><p>최근 시행된 기출문제로 실전 연습</p></div>
+            <div class="arrow">›</div>
+          </div>
+          <div class="menu-card" onclick="goToChapterStart()">
+            <div class="icon">📖</div>
+            <div class="info"><h3>단원별 연습</h3><p>과목을 선택해 집중 학습</p></div>
+            <div class="arrow">›</div>
+          </div>
+          <div class="menu-card" onclick="goToStarList()">
+            <div class="icon">⭐</div>
+            <div class="info"><h3>즐겨찾기</h3><p>내가 표시한 문제만 모아보기</p></div>
+            <div class="arrow">›</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 설정 (하단 탭) -->
+  <div class="screen" id="screen-settings">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>설정</h2>
+        <p>계정과 학습 데이터를 관리하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="settings-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 프로 버전 -->
+  <div class="screen" id="screen-pro">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>프로 버전</h2>
+        <p>해설과 요약노트로 더 빠르게 합격하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="pro-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CBT 기출예상문제 설정 -->
   <div class="screen" id="screen-start">
     <div class="start-screen">
       <div class="start-top">
@@ -642,6 +783,7 @@
     </div>
   </div>
 
+  <nav class="tab-bar" id="tab-bar"></nav>
 </div>
 <script src="/vendor/supabase.js"></script>
 <script>
@@ -682,6 +824,38 @@ let currentUser = null;
 const ACCOUNT = { marks: new Map(), history: [] }; // 로그인 시 서버에서 채운다
 const QCACHE = new Map();                          // 문항 id → 본문 (계정엔 참조만 저장하므로)
 const isSignedIn = () => currentUser !== null;
+
+/* ── 프로(유료) 권한 ──
+   화면을 가리는 것만으로는 못 막는다. 프로 전용 데이터(보기별 해설·요약노트)는
+   서버가 응답에서 아예 빼고 내려주고, 여기 IS_PRO는 "무엇을 그릴지"만 결정한다.
+   권한은 user_entitlements 테이블이 원본이며 클라이언트는 읽기만 할 수 있다. */
+let IS_PRO = false;
+const isPro = () => IS_PRO;
+const PRO_PRICE = 5500, PRO_LIST_PRICE = 8900;
+
+async function loadEntitlement() {
+  const { data, error } = await SB.from('user_entitlements')
+    .select('is_pro,expires_at').maybeSingle();
+  if (error) throw new Error(error.message);
+  IS_PRO = !!(data && data.is_pro
+    && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now()));
+}
+
+/* 권한이 바뀌면 요약노트를 다시 받아야 한다.
+   (무료일 때 받은 빈 목록이 로그인 후에도 세션 내내 굳어버리는 것을 막는다) */
+function resetProContent() {
+  SUMMARY_NOTES = [];
+  summaryNotesLoaded = false;
+}
+
+/* 서버가 프로 여부를 판정할 수 있도록 세션 토큰을 실어 보낸다. 비로그인이면 헤더 없음 */
+async function authHeaders() {
+  try {
+    const { data } = await SB.auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch(e) { return {}; }
+}
 
 /* 서버 반영은 화면을 막지 않는다. 순서 보장을 위해 한 줄로 이어 붙인다. */
 let remoteChain = Promise.resolve();
@@ -726,9 +900,10 @@ function setMark(q, flag, on) {
 /* 계정엔 문항 참조만 있으므로 본문은 서버에서 받아 캐시한다 */
 async function hydrateQuestionCache(refs) {
   const missing = refs.filter(r => r.source && !QCACHE.has(r.id));
+  const auth = await authHeaders();
   for (let i = 0; i < missing.length; i += 400) {
     const res = await fetch('/api/questions', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({ ids: missing.slice(i, i + 400) }),
     });
     if (!res.ok) return;
@@ -760,10 +935,11 @@ async function loadAccountData() {
 async function resolveSources(ids) {
   const out = new Map();
   const SOURCES = ['mock', 'gisul_yesang', 'gisul'];
+  const auth = await authHeaders();
   for (let i = 0; i < ids.length; i += 150) {
     const refs = ids.slice(i, i + 150).flatMap(id => SOURCES.map(source => ({ source, id })));
     const res = await fetch('/api/questions', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({ ids: refs }),
     });
     if (!res.ok) continue;
@@ -836,15 +1012,153 @@ function accountLabel(user) {
   return user.email || m.name || m.full_name || m.preferred_username || m.user_name || '로그인됨';
 }
 
-function renderAccountBar(msg) {
-  const el = document.getElementById('account-bar');
+/* 로그인 직후 마이그레이션 결과 안내. 설정 화면을 다시 그려도 남아 있어야 한다 */
+let syncMessage = '';
+
+function goToSettings() { renderSettings(); goTo('screen-settings'); }
+
+function renderSettings(msg) {
+  if (msg !== undefined) syncMessage = msg;
+  const el = document.getElementById('settings-body');
   if (!el) return;
-  el.innerHTML = isSignedIn()
-    ? `<span class="acct-who">${esc(accountLabel(currentUser))}</span>
-       <button class="acct-btn" data-act="signout">로그아웃</button>`
-    : `<button class="acct-btn" data-act="signin" data-provider="google">구글 로그인</button>
-       <button class="acct-btn kakao" data-act="signin" data-provider="kakao">카카오 로그인</button>`;
-  if (msg) el.insertAdjacentHTML('afterbegin', `<span class="acct-msg">${esc(msg)}</span>`);
+
+  const account = isSignedIn()
+    ? `<div class="account-card">
+         <div class="a-label">로그인 계정</div>
+         <div class="a-name">${esc(accountLabel(currentUser))}</div>
+         ${syncMessage ? `<div class="a-msg">${esc(syncMessage)}</div>` : ''}
+         <div class="a-actions">
+           <button class="acct-btn" data-act="signout">로그아웃</button>
+         </div>
+       </div>`
+    : `<div class="account-card">
+         <div class="a-label">로그인하지 않음</div>
+         <div class="a-name">이 기기에만 저장됩니다</div>
+         <div class="a-msg">로그인하면 오답노트·즐겨찾기·풀이기록이 계정에 저장되어 다른 기기에서도 이어집니다.</div>
+         <div class="a-actions">
+           <button class="acct-btn" data-act="signin" data-provider="google">구글 로그인</button>
+           <button class="acct-btn kakao" data-act="signin" data-provider="kakao">카카오 로그인</button>
+         </div>
+       </div>`;
+
+  const proRow = isPro()
+    ? `<div class="settings-row pro static"><span>👑</span> 프로 버전<span class="s-right">이용중 ✓</span></div>`
+    : `<button class="settings-row pro" data-act="pro"><span>👑</span> 프로 버전 구매<span class="s-right">${PRO_PRICE.toLocaleString()}원</span></button>`;
+
+  el.innerHTML = `
+    <div class="setting-section">
+      <h4>계정</h4>
+      ${account}
+    </div>
+    <div class="setting-section">
+      <h4>프로버전</h4>
+      <div class="settings-list">${proRow}</div>
+    </div>
+    <div class="setting-section">
+      <h4>데이터</h4>
+      <div class="settings-list">
+        <button class="settings-row danger" data-act="reset"><span>♻️</span> 학습 데이터 초기화</button>
+      </div>
+      <div class="settings-hint">${isSignedIn()
+        ? '오답노트·즐겨찾기·풀이기록은 계정에 자동 저장됩니다. 따로 백업하지 않아도 됩니다.'
+        : '지금은 이 기기에만 저장됩니다. 로그인하면 기존 기록이 계정으로 옮겨집니다.'}</div>
+    </div>
+    <div class="setting-section">
+      <h4>문의</h4>
+      <div class="settings-list">
+        <a class="settings-row" href="mailto:bonekatana@gmail.com?subject=%ED%95%9C%EC%8B%9D%EC%A1%B0%EB%A6%AC%EA%B8%B0%EB%8A%A5%EC%82%AC%20CBT%20%EB%AC%B8%EC%9D%98"><span>✉️</span> 문의하기<span class="s-right">›</span></a>
+      </div>
+    </div>`;
+}
+
+/* 오답노트·즐겨찾기·풀이기록·진행중인 시험을 한 번에 지운다.
+   풀이결과 화면의 clearExamHistory()는 기록만 지우는 좁은 버전으로 그대로 둔다. */
+async function resetStudyData() {
+  if (!confirm('오답노트, 즐겨찾기, 풀이기록, 진행중인 시험을 모두 지웁니다.\n되돌릴 수 없습니다. 계속할까요?')) return;
+
+  if (isSignedIn()) {
+    const [marks, hist] = await Promise.all([
+      SB.from('user_question_marks').delete().eq('user_id', currentUser.id),
+      SB.from('user_exam_history').delete().eq('user_id', currentUser.id),
+    ]);
+    const failed = [marks, hist].find(r => r.error);
+    if (failed) { alert('삭제하지 못했습니다: ' + failed.error.message); return; }
+    ACCOUNT.marks = new Map();
+    ACCOUNT.history = [];
+    QCACHE.clear();
+  }
+  // 진행중인 시험은 로그인 여부와 상관없이 항상 기기에 있다
+  [WRONG_NOTES_KEY, STARRED_KEY, EXAM_HISTORY_KEY, EXAM_PROGRESS_KEY, EXAM_QUESTIONS_KEY]
+    .forEach(k => localStorage.removeItem(k));
+
+  alert('학습 데이터를 초기화했습니다.');
+  renderSettings();
+  renderInProgressCards();
+}
+
+/* ── 프로 버전 안내 화면 ──
+   시험 도중 잠금 카드를 눌러 들어올 수 있으므로, 돌아갈 화면을 기억해 둔다.
+   (시험 화면은 DOM에 그대로 남아 있고 타이머도 계속 도므로 그냥 되돌리면 된다) */
+let proReturnScreen = 'screen-settings';
+function goToPro(from) {
+  proReturnScreen = from || 'screen-settings';
+  renderProScreen();
+  goTo('screen-pro');
+}
+
+function renderProScreen() {
+  const el = document.getElementById('pro-body');
+  if (!el) return;
+  const off = Math.round((1 - PRO_PRICE / PRO_LIST_PRICE) * 100);
+
+  const cta = isPro()
+    ? `<button class="btn-upgrade" disabled>✓ 이미 이용 중입니다</button>`
+    : (isSignedIn()
+      ? `<button class="btn-upgrade" data-act="checkout">업그레이드 하기 (${PRO_PRICE.toLocaleString()}원)</button>`
+      : `<button class="btn-upgrade" data-act="signin-pro">로그인하고 업그레이드</button>`);
+
+  el.innerHTML = `
+    <div class="setting-section">
+      <div class="pro-hero">
+        <div class="p-kicker">추가 결제 없이 평생 이용</div>
+        <div class="p-head">프로 버전으로 업그레이드</div>
+        <div class="p-price">
+          <s>${PRO_LIST_PRICE.toLocaleString()}원</s>${PRO_PRICE.toLocaleString()}원
+          <small>(${off}%↓)</small>
+        </div>
+      </div>
+    </div>
+    <div class="setting-section">
+      <h4>프로 버전에서 열리는 기능</h4>
+      <div class="settings-list">
+        <div class="pro-benefit">
+          <h5>📌 보기별 상세해설</h5>
+          <p>정답만이 아니라 1~4번 보기 하나하나에 왜 맞고 왜 틀렸는지가 붙습니다. 헷갈리는 보기를 그 자리에서 정리할 수 있습니다.</p>
+          <div class="cmp">
+            <span class="free">무료 · 총평 해설</span>
+            <span class="paid">프로 · 보기 4개 전부</span>
+          </div>
+        </div>
+        <div class="pro-benefit">
+          <h5>📝 주제별 요약노트</h5>
+          <p>문제와 연결된 암기 포인트를 정답 확인 직후에 바로 보여줍니다. 틀린 문제 하나가 그 단원 전체 정리로 이어집니다.</p>
+          <div class="cmp">
+            <span class="free">무료 · 제공 안 됨</span>
+            <span class="paid">프로 · 문제마다 자동 연결</span>
+          </div>
+        </div>
+      </div>
+      <div class="settings-hint">문제풀이, 정답 확인, 오답노트, 즐겨찾기, 풀이결과 통계는 무료로 계속 쓸 수 있습니다.</div>
+    </div>
+    <div class="bottom-actions">
+      <button class="btn-back" data-act="back">←</button>
+      ${cta}
+    </div>`;
+}
+
+function startCheckout() {
+  // 결제(PG) 연동 전이다. 지금은 관리자가 user_entitlements에 직접 프로를 부여한다.
+  alert('결제 기능은 준비 중입니다.\n조금만 기다려 주세요!');
 }
 
 const PROVIDER_LABELS = { google: '구글', kakao: '카카오' };
@@ -854,34 +1168,40 @@ async function signIn(provider) {
     provider,
     options: { redirectTo: location.origin },
   });
-  if (error) renderAccountBar(`${PROVIDER_LABELS[provider]} 로그인 실패`);
+  if (error) renderSettings(`${PROVIDER_LABELS[provider]} 로그인 실패`);
 }
 async function signOut() {
   await SB.auth.signOut();
   currentUser = null;
+  IS_PRO = false;
   ACCOUNT.marks = new Map();
   ACCOUNT.history = [];
   QCACHE.clear();
-  renderAccountBar();
+  resetProContent();
+  renderSettings('');
   renderInProgressCards();
 }
 
 async function onSignedIn(user) {
   currentUser = user;
-  renderAccountBar('동기화 중…');
+  renderSettings('동기화 중…');
   let result = { moved: 0, kept: 0 };
   try {
     result = await migrateLocalData();
     await loadAccountData();
   } catch (e) {
     console.warn('계정 동기화 실패:', e.message);
-    renderAccountBar('동기화 실패 — 기기 기록은 그대로 있습니다');
+    renderSettings('동기화 실패 — 기기 기록은 그대로 있습니다');
     return;
   }
+  // 권한 조회가 실패해도 동기화 자체는 성공한 것이다 (무료로 두고 넘어간다)
+  try { await loadEntitlement(); } catch (e) { console.warn('권한 조회 실패:', e.message); }
+  resetProContent();
+
   const msg = result.kept > 0
     ? `${result.moved}건 이동, ${result.kept}건은 다음에 다시 시도합니다`
     : (result.moved > 0 ? `${result.moved}건을 계정으로 옮겼습니다` : '');
-  renderAccountBar(msg);
+  renderSettings(msg);
 }
 
 async function initAuth() {
@@ -891,14 +1211,16 @@ async function initAuth() {
     history.replaceState({}, '', location.pathname);
   }
   if (data.session) await onSignedIn(data.session.user);
-  else renderAccountBar();
+  else renderSettings('');
 
   SB.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session && (!currentUser || currentUser.id !== session.user.id)) {
       onSignedIn(session.user);
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
-      renderAccountBar();
+      IS_PRO = false;
+      resetProContent();
+      renderSettings('');
     }
   });
 }
@@ -1111,7 +1433,49 @@ async function clearExamHistory() {
 function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  syncTabBar(id);
   if (id === 'screen-home') renderInProgressCards();
+  window.scrollTo(0, 0);
+}
+
+/* ── 하단 탭 ── */
+const TAB_ITEMS = [
+  { key: 'home',     icon: '🏠', label: '홈',       go: () => goTo('screen-home') },
+  { key: 'practice', icon: '📝', label: '문제풀이', go: () => goTo('screen-practice') },
+  { key: 'wrong',    icon: '📋', label: '오답노트', go: () => goToWrongNote() },
+  { key: 'results',  icon: '📊', label: '풀이결과', go: () => goToResults() },
+  { key: 'settings', icon: '⚙️', label: '설정',     go: () => goToSettings() },
+];
+/* 어느 화면이 어느 탭에 속하는지 — 하위 화면도 상위 탭을 켜둔다 */
+const TAB_BY_SCREEN = {
+  'screen-home': 'home',
+  'screen-practice': 'practice',
+  'screen-start': 'practice',
+  'screen-gisul-start': 'practice',
+  'screen-chapter-start': 'practice',
+  'screen-star-list': 'practice',
+  'screen-wrong-note': 'wrong',
+  'screen-results': 'results',
+  'screen-settings': 'settings',
+  'screen-pro': 'settings',
+};
+/* 시험 화면의 하단은 .exam-nav가 이미 쓴다. 로딩 중엔 이동시키지 않는다 */
+const TABBAR_HIDDEN = ['screen-exam', 'screen-loading'];
+
+function renderTabBar() {
+  document.getElementById('tab-bar').innerHTML = TAB_ITEMS.map(t =>
+    `<button class="tab-item" data-tab="${t.key}">
+       <span class="t-icon">${t.icon}</span><span class="t-label">${t.label}</span>
+     </button>`).join('');
+}
+function syncTabBar(screenId) {
+  const bar = document.getElementById('tab-bar');
+  const show = !TABBAR_HIDDEN.includes(screenId);
+  bar.classList.toggle('show', show);
+  document.querySelector('.phone-wrap').classList.toggle('has-tabbar', show);
+  const active = TAB_BY_SCREEN[screenId];
+  bar.querySelectorAll('.tab-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.tab === active));
 }
 
 /* ── 설정 ── */
@@ -1298,7 +1662,7 @@ function retryFromResult() {
 async function fetchAllQuestions(dbKeys) {
   const res = await fetch('/api/questions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({ subjects: selectedSubjects, dbKeys, count: selectedCount })
   });
   if (!res.ok) throw new Error(await errorMessage(res, '문제를 불러오지 못했습니다'));
@@ -1321,7 +1685,7 @@ let summaryNotesLoaded = false;
 async function fetchAllSummaryNotes() {
   const res = await fetch('/api/summary-notes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({})
   });
   if (!res.ok) throw new Error(await errorMessage(res, '요약노트를 불러오지 못했습니다'));
@@ -1333,6 +1697,7 @@ async function loadSummaryNotes() {
   // 성공했을 때만 완료로 표시한다. 예전에는 실패해도 완료 처리해서
   // 네트워크가 한 번 끊기면 그 세션 내내 요약노트가 나오지 않았다.
   if (summaryNotesLoaded || summaryNotesLoading) return;
+  if (!isPro()) return; // 서버도 빈 목록을 주지만, 굳이 요청까지 보낼 이유는 없다
   summaryNotesLoading = true;
   try {
     SUMMARY_NOTES = await fetchAllSummaryNotes();
@@ -1559,15 +1924,19 @@ function renderQ() {
   const sc = SUBJ_COLOR[q.subject] || '#6B7280';
   const dc = DIFF_COLOR[q.difficulty] || '#6B7280';
 
+  // 보기별 상세해설은 프로 전용이다. 무료 사용자는 서버가 해설 필드를 아예 주지 않으므로
+  // 보기마다 "준비되지 않았습니다"를 반복하지 않고, 아래에 잠금 카드 하나만 띄운다.
+  const showOptExps = rev && isPro();
+
   const optsHtml = q.opts.map((o, i) => {
     let cls = 'option-item'; let icon = ''; let state = 'neutral';
     if (rev) {
       if (i === q.answer)        { cls += ' correct'; icon = '<span class="opt-icon">✓</span>'; state = 'correct'; }
       else if (i === sel)        { cls += ' wrong';   icon = '<span class="opt-icon">✗</span>'; state = 'wrong'; }
-      cls += ' has-explain';
+      if (showOptExps) cls += ' has-explain';
     } else if (i === sel)        { cls += ' selected'; }
 
-    const explainHtml = rev
+    const explainHtml = showOptExps
       ? `<div class="opt-explain ${state}">${esc((q.optExps && q.optExps[i]) || '이 보기에 대한 해설이 아직 준비되지 않았습니다.')}</div>`
       : '';
 
@@ -1582,12 +1951,19 @@ function renderQ() {
   const checkBtn = (sel !== null && !rev)
     ? `<button class="check-btn" onclick="revealAnswer()">정답 확인하기</button>` : '';
 
-  const note = rev ? findNoteFor(q) : null;
+  const note = rev && isPro() ? findNoteFor(q) : null;
   // bodyHtml만 유일하게 HTML로 삽입한다 (동기화 시점에 이스케이프된 값)
   const noteHtml = note
     ? `<div class="summary-note-card">
         <div class="note-title">📝 ${esc(note.title)}</div>
         ${note.bodyHtml}
+      </div>`
+    : '';
+
+  const lockHtml = (rev && !isPro())
+    ? `<div class="lock-card" data-act="pro">
+        <div class="l-title">🔒 보기별 상세해설 · 주제별 요약노트</div>
+        <div class="l-sub">보기 1~4번의 개별 해설과 이 문제의 요약노트는 프로 버전에서 열립니다.<br>자세히 보기 ›</div>
       </div>`
     : '';
 
@@ -1611,6 +1987,7 @@ function renderQ() {
       <div class="ex-text">${esc(q.exp || '해설이 없습니다.')}</div>
     </div>
     ${noteHtml}
+    ${lockHtml}
   `;
   updateQStrip();
 }
@@ -1741,9 +2118,31 @@ function delegate(containerId, selector, handler) {
 delegate('wrong-note-body', '.wrong-item', el => startSingleWrongReview(el.dataset.id));
 delegate('star-list-body',  '.star-item',  el => startSingleStarReview(el.dataset.id));
 delegate('home-progress',   '.progress-card', el => resumeExam(el.dataset.mode));
-delegate('account-bar',     '.acct-btn', el => (el.dataset.act === 'signin' ? signIn(el.dataset.provider) : signOut()));
 delegate('results-body',    '#btn-clear-history', () => clearExamHistory());
+delegate('tab-bar',         '.tab-item', el => {
+  const tab = TAB_ITEMS.find(t => t.key === el.dataset.tab);
+  if (tab) tab.go();
+});
+delegate('settings-body', '[data-act]', el => {
+  const act = el.dataset.act;
+  if (act === 'signin') signIn(el.dataset.provider);
+  else if (act === 'signout') signOut();
+  else if (act === 'pro') goToPro('screen-settings');
+  else if (act === 'reset') resetStudyData();
+});
+delegate('pro-body', '[data-act]', el => {
+  const act = el.dataset.act;
+  if (act === 'signin-pro') signIn('google');
+  else if (act === 'checkout') startCheckout();
+  else if (act === 'back') {
+    if (proReturnScreen === 'screen-settings') goToSettings();
+    else goTo(proReturnScreen);
+  }
+});
+delegate('exam-body', '.lock-card', () => goToPro('screen-exam'));
 
+renderTabBar();
+syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
 initAuth();
 
 /* 홈의 총 문항 수는 실제 DB 값을 쓴다 (예전엔 "300+"로 고정돼 있었다) */
