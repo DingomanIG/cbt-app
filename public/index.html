@@ -671,7 +671,11 @@ const DB_KEYS_BY_MODE = {
    (문제는 /api/questions 서버 경유로만 나간다). */
 const SUPABASE_URL = 'https://usveeckdaaeetyvbxzmh.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_WI5rp_o_6dCPdPT82n4WNg_qvQPZd50';
-const SB = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// flowType 기본값(implicit)은 액세스 토큰을 URL 프래그먼트에 실어 보낸다.
+// PKCE는 코드만 오가므로 토큰이 주소창·브라우저 기록에 남지 않는다.
+const SB = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: { flowType: 'pkce', detectSessionInUrl: true, persistSession: true, autoRefreshToken: true },
+});
 
 let currentUser = null;
 const ACCOUNT = { marks: new Map(), history: [] }; // 로그인 시 서버에서 채운다
@@ -862,6 +866,10 @@ async function onSignedIn(user) {
 
 async function initAuth() {
   const { data } = await SB.auth.getSession();
+  // 로그인 후 돌아온 ?code=... 를 주소창에서 지운다 (세션 교환은 SDK가 이미 끝냈다)
+  if (/[?&](code|error)=/.test(location.search)) {
+    history.replaceState({}, '', location.pathname);
+  }
   if (data.session) await onSignedIn(data.session.user);
   else renderAccountBar();
 
