@@ -72,6 +72,7 @@
     font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer;
   }
   .account-bar .acct-btn:active { transform: scale(.97); }
+  .account-bar .acct-btn.kakao { background: #FEE500; color: #191600; }
 
   .home-header .badge {
     display: inline-flex; align-items: center; gap: 6px;
@@ -829,22 +830,31 @@ async function migrateLocalData() {
   return { moved: markRows.length + histRows.length, kept: keptWrong + keptStarred };
 }
 
+/* 카카오는 이메일 제공이 선택이라 없을 수 있다 → 닉네임으로 대체 */
+function accountLabel(user) {
+  const m = user.user_metadata || {};
+  return user.email || m.name || m.full_name || m.preferred_username || m.user_name || '로그인됨';
+}
+
 function renderAccountBar(msg) {
   const el = document.getElementById('account-bar');
   if (!el) return;
   el.innerHTML = isSignedIn()
-    ? `<span class="acct-who">${esc(currentUser.email || '로그인됨')}</span>
+    ? `<span class="acct-who">${esc(accountLabel(currentUser))}</span>
        <button class="acct-btn" data-act="signout">로그아웃</button>`
-    : `<button class="acct-btn" data-act="signin">구글로 로그인</button>`;
+    : `<button class="acct-btn" data-act="signin" data-provider="google">구글 로그인</button>
+       <button class="acct-btn kakao" data-act="signin" data-provider="kakao">카카오 로그인</button>`;
   if (msg) el.insertAdjacentHTML('afterbegin', `<span class="acct-msg">${esc(msg)}</span>`);
 }
 
-async function signIn() {
+const PROVIDER_LABELS = { google: '구글', kakao: '카카오' };
+async function signIn(provider) {
+  if (!PROVIDER_LABELS[provider]) return;
   const { error } = await SB.auth.signInWithOAuth({
-    provider: 'google',
+    provider,
     options: { redirectTo: location.origin },
   });
-  if (error) renderAccountBar('로그인 실패');
+  if (error) renderAccountBar(`${PROVIDER_LABELS[provider]} 로그인 실패`);
 }
 async function signOut() {
   await SB.auth.signOut();
@@ -1662,7 +1672,7 @@ function delegate(containerId, selector, handler) {
 delegate('wrong-note-body', '.wrong-item', el => startSingleWrongReview(el.dataset.id));
 delegate('star-list-body',  '.star-item',  el => startSingleStarReview(el.dataset.id));
 delegate('home-progress',   '.progress-card', el => resumeExam(el.dataset.mode));
-delegate('account-bar',     '.acct-btn', el => (el.dataset.act === 'signin' ? signIn() : signOut()));
+delegate('account-bar',     '.acct-btn', el => (el.dataset.act === 'signin' ? signIn(el.dataset.provider) : signOut()));
 
 initAuth();
 
