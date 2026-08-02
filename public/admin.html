@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>동기화 · 한식조리기능사 CBT</title>
+<style>
+  :root {
+    --primary: #1A5C38; --accent: #F5A623;
+    --bg: #F5F6F8; --card: #FFFFFF;
+    --text: #1A1A1A; --text-sub: #6B7280; --border: #E5E7EB;
+    --correct: #16A34A; --correct-bg: #F0FDF4;
+    --wrong: #DC2626; --wrong-bg: #FEF2F2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: var(--bg); color: var(--text);
+    min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+  }
+  .wrap { width: 100%; max-width: 390px; min-height: 100vh; display: flex; flex-direction: column; }
+  .top { background: var(--primary); padding: 52px 24px 32px; color: #fff; }
+  .top h2 { font-size: 24px; font-weight: 700; }
+  .top p { opacity: .7; font-size: 13px; margin-top: 6px; }
+  .body { background: var(--bg); border-radius: 28px 28px 0 0; flex: 1; padding: 28px 20px; margin-top: -20px; }
+
+  .section { margin-bottom: 20px; }
+  .section h4 { font-size: 12px; font-weight: 700; color: var(--text-sub); letter-spacing: .4px; margin-bottom: 10px; }
+
+  input[type=password] {
+    width: 100%; padding: 15px; border: 2px solid var(--border); border-radius: 12px;
+    background: var(--card); font-size: 15px; font-family: inherit; color: var(--text);
+  }
+  input[type=password]:focus { outline: none; border-color: var(--primary); }
+
+  button {
+    width: 100%; padding: 18px; border: none; border-radius: 16px;
+    background: var(--primary); color: #fff;
+    font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button:active:not(:disabled) { transform: scale(.98); }
+  button.secondary {
+    background: var(--card); color: var(--text-sub);
+    border: 2px solid var(--border); font-size: 13px; font-weight: 600; padding: 13px;
+  }
+
+  .card { background: var(--card); border-radius: 16px; padding: 16px 18px; font-size: 13px; line-height: 1.7; }
+  .card.ok { background: var(--correct-bg); border: 1px solid #A7F3C4; color: #14532D; }
+  .card.err { background: var(--wrong-bg); border: 1px solid #FCA5A5; color: var(--wrong); }
+  .card .row { display: flex; justify-content: space-between; }
+  .card .row b { font-weight: 700; }
+  .muted { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+
+  .spinner {
+    width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.35);
+    border-top-color: #fff; border-radius: 50%;
+    animation: spin .8s linear infinite; display: inline-block; vertical-align: -3px; margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h2>문제 동기화</h2>
+    <p>Notion에서 편집한 내용을 앱에 반영합니다</p>
+  </div>
+  <div class="body">
+
+    <!-- 비밀번호 입력 -->
+    <div id="auth-section" class="section hidden">
+      <h4>관리자 비밀번호</h4>
+      <input type="password" id="token-input" placeholder="비밀번호를 입력하세요" autocomplete="current-password">
+      <div class="muted" style="margin-top:8px">한 번 입력하면 이 기기에 저장되어 다음부터는 바로 버튼만 누르면 됩니다.</div>
+      <div style="margin-top:12px"><button onclick="saveToken()">저장하고 계속</button></div>
+    </div>
+
+    <!-- 동기화 -->
+    <div id="sync-section" class="section hidden">
+      <button id="sync-btn" onclick="runSync()">지금 동기화</button>
+      <div class="muted" style="margin-top:10px;text-align:center">
+        보통 20초쯤 걸립니다. 매일 새벽 3시에 자동으로도 실행됩니다.
+      </div>
+    </div>
+
+    <div id="result" class="section hidden"></div>
+
+    <div class="section" id="footer-section" style="margin-top:28px">
+      <button class="secondary" onclick="clearToken()">비밀번호 지우기</button>
+      <div style="margin-top:8px"><button class="secondary" onclick="location.href='/'">앱으로 돌아가기</button></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const TOKEN_KEY = 'syncToken';
+const LAST_SYNC_KEY = 'lastSyncAt';
+
+const $ = (id) => document.getElementById(id);
+const getToken = () => localStorage.getItem(TOKEN_KEY) || '';
+
+function render() {
+  const hasToken = !!getToken();
+  $('auth-section').classList.toggle('hidden', hasToken);
+  $('sync-section').classList.toggle('hidden', !hasToken);
+  if (hasToken) showLastSync();
+}
+
+function showLastSync() {
+  const last = localStorage.getItem(LAST_SYNC_KEY);
+  if (!last || !$('result').classList.contains('hidden')) return;
+  $('result').className = 'section';
+  $('result').innerHTML = `<div class="card"><span class="muted">마지막 동기화: ${new Date(last).toLocaleString('ko-KR')}</span></div>`;
+}
+
+function saveToken() {
+  const v = $('token-input').value.trim();
+  if (!v) return;
+  localStorage.setItem(TOKEN_KEY, v);
+  $('token-input').value = '';
+  render();
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  $('result').className = 'section hidden';
+  render();
+}
+
+async function runSync() {
+  const btn = $('sync-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>동기화 중…';
+  $('result').className = 'section hidden';
+
+  try {
+    const res = await fetch('/api/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-sync-token': getToken() },
+    });
+
+    let data;
+    try { data = await res.json(); }
+    catch { throw new Error(`서버 응답을 읽지 못했습니다 (HTTP ${res.status})`); }
+
+    if (!res.ok || !data.ok) {
+      if (res.status === 401) {
+        localStorage.removeItem(TOKEN_KEY);
+        render();
+      }
+      throw new Error(data.error || `동기화 실패 (HTTP ${res.status})`);
+    }
+
+    localStorage.setItem(LAST_SYNC_KEY, data.syncedAt);
+    const rows = data.tables
+      .map((t) => `<div class="row"><span>${t.table}</span><b>${t.rows.toLocaleString()}건</b></div>`)
+      .join('');
+    const skipped = data.skipped.length
+      ? `<div class="muted" style="margin-top:8px">건너뜀: ${data.skipped.join(', ')}</div>` : '';
+    $('result').className = 'section';
+    $('result').innerHTML = `
+      <div class="card ok">
+        <div style="font-weight:700;margin-bottom:8px">✓ 동기화 완료 (${(data.elapsedMs / 1000).toFixed(1)}초)</div>
+        ${rows}
+        <div class="row" style="margin-top:8px;padding-top:8px;border-top:1px solid #A7F3C4">
+          <span>합계</span><b>${data.total.toLocaleString()}건</b>
+        </div>
+        ${skipped}
+      </div>`;
+  } catch (e) {
+    $('result').className = 'section';
+    $('result').innerHTML = `<div class="card err">⚠️ ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '지금 동기화';
+  }
+}
+
+render();
+</script>
+</body>
+</html>
