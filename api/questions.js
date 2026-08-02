@@ -6,41 +6,120 @@ const TABLES = {
   gisul: 'questions_gisul',
 };
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+/* 클라이언트가 실제로 쓰는 컬럼만 반환 */
+const COLUMNS = [
+  'id', '과목', '챕터', '난이도', '문제',
+  '보기1', '보기2', '보기3', '보기4',
+  '보기1_해설', '보기2_해설', '보기3_해설', '보기4_해설',
+  '정답', '해설', '관련키워드',
+].join(',');
 
-  if (req.method === 'OPTIONS') return res.status(200).end();
+const PAGE_SIZE = 1000; // Supabase(PostgREST) 기본 max-rows
+const IN_CHUNK = 100;   // .in() URL 길이 제한 회피
+const MAX_COUNT = 500;
+
+function candidateQuery(supabase, table, subjects) {
+  let query = supabase
+    .from(table)
+    .select('id')
+    .eq('반영금지', false)
+    .not('정답', 'is', null); // 정답 누락 문항은 출제 대상에서 제외
+  if (subjects.length > 0) query = query.in('과목', subjects);
+  return query;
+}
+
+/* max-rows(1000) 제한을 넘어서는 테이블도 전부 읽는다 */
+async function fetchAllIds(supabase, table, subjects) {
+  const ids = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await candidateQuery(supabase, table, subjects)
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1);
+    if (error) throw new Error(error.message);
+    ids.push(...data.map((r) => r.id));
+    if (data.length < PAGE_SIZE) return ids;
+  }
+}
+
+/* 부분 Fisher-Yates: 전체를 섞지 않고 앞 n개만 무작위로 뽑는다 */
+function sample(arr, n) {
+  const a = [...arr];
+  const k = Math.min(n, a.length);
+  for (let i = 0; i < k; i++) {
+    const j = i + Math.floor(Math.random() * (a.length - i));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a.slice(0, k);
+}
+
+function chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+export default async function handler(req, res) {
+  // 프런트엔드와 동일 출처에서만 호출하므로 CORS 허용 헤더를 두지 않는다
+  res.setHeader('Cache-Control', 'no-store');
+
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { subjects, dbKeys = ['mock'] } = req.body || {};
+  try {
+    const body = typeof req.body === 'object' && req.body !== null ? req.body : {};
 
-  const tables = dbKeys.map((k) => TABLES[k]);
-  if (tables.some((t) => !t)) {
-    return res.status(400).json({ error: '알 수 없는 dbKey입니다' });
-  }
-
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
-  }
-
-  const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
-
-  const queries = tables.map((table) => {
-    let query = supabase.from(table).select('*').eq('반영금지', false);
-    if (subjects && subjects.length > 0) {
-      query = query.in('과목', subjects);
+    const rawKeys = Array.isArray(body.dbKeys) && body.dbKeys.length > 0 ? body.dbKeys : ['mock'];
+    const tables = rawKeys.map((k) => (typeof k === 'string' ? TABLES[k] : undefined));
+    if (tables.some((t) => !t)) {
+      return res.status(400).json({ error: '알 수 없는 dbKey입니다' });
     }
-    return query;
-  });
 
-  const responses = await Promise.all(queries);
+    const subjects = Array.isArray(body.subjects)
+      ? body.subjects.filter((s) => typeof s === 'string')
+      : [];
 
-  const failed = responses.find((r) => r.error);
-  if (failed) {
-    return res.status(500).json({ error: failed.error.message });
+    const requested = Number(body.count);
+    const count = Number.isFinite(requested) && requested > 0
+      ? Math.min(Math.floor(requested), MAX_COUNT)
+      : MAX_COUNT;
+
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return res.status(500).json({ error: '환경변수가 설정되지 않았습니다' });
+    }
+
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+
+    // 1) 후보 id만 모은다 (테이블 전체를 내려받지 않음)
+    const idLists = await Promise.all(
+      [...new Set(tables)].map(async (table) => ({
+        table,
+        ids: await fetchAllIds(supabase, table, subjects),
+      }))
+    );
+    const pool = idLists.flatMap(({ table, ids }) => ids.map((id) => ({ table, id })));
+    if (pool.length === 0) return res.status(200).json({ results: [] });
+
+    // 2) 여러 테이블을 합친 뒤 필요한 문항 수만큼만 추출
+    const picked = sample(pool, count);
+    const byTable = new Map();
+    picked.forEach(({ table, id }) => {
+      if (!byTable.has(table)) byTable.set(table, []);
+      byTable.get(table).push(id);
+    });
+
+    // 3) 뽑힌 문항의 본문만 조회
+    const queries = [];
+    byTable.forEach((ids, table) => {
+      chunk(ids, IN_CHUNK).forEach((part) => {
+        queries.push(supabase.from(table).select(COLUMNS).in('id', part));
+      });
+    });
+    const responses = await Promise.all(queries);
+
+    const failed = responses.find((r) => r.error);
+    if (failed) return res.status(500).json({ error: failed.error.message });
+
+    return res.status(200).json({ results: responses.flatMap((r) => r.data) });
+  } catch (e) {
+    return res.status(500).json({ error: e.message || '문제를 불러오지 못했습니다' });
   }
-
-  return res.status(200).json({ results: responses.flatMap((r) => r.data) });
 }

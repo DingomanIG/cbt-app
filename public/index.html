@@ -392,7 +392,7 @@
     </div>
     <div class="home-progress" id="home-progress" style="display:none"></div>
     <div class="home-menu">
-      <div class="menu-card featured" onclick="goTo('screen-start')">
+      <div class="menu-card featured" onclick="goToMockStart()">
         <div class="icon">📝</div>
         <div class="info"><h3>CBT 기출예상문제</h3><p>실제 문제로 시험 연습</p></div>
         <div class="arrow">›</div>
@@ -801,6 +801,16 @@ function goToChapterStart() {
   document.getElementById('error-area-ch').innerHTML = '';
   goTo('screen-chapter-start');
 }
+/* ── CBT 기출예상문제 진입/시작 ── */
+function goToMockStart() {
+  selectedSubjects = [];
+  document.querySelectorAll('#screen-start .subject-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('#screen-start .count-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelector('#screen-start .count-btn[data-count="10"]').classList.add('selected');
+  selectedCount = 10;
+  document.getElementById('error-area').innerHTML = '';
+  goTo('screen-start');
+}
 async function startMockExam() {
   examMode = 'mock';
   await startExam();
@@ -949,7 +959,7 @@ async function fetchAllQuestions(dbKeys) {
   const res = await fetch('/api/questions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subjects: selectedSubjects, dbKeys })
+    body: JSON.stringify({ subjects: selectedSubjects, dbKeys, count: selectedCount })
   });
   if (!res.ok) {
     const err = await res.json();
@@ -993,12 +1003,16 @@ function parsePage(row) {
   const opts = [], optExps = [];
   rawOpts.forEach((o, i) => { if (o) { opts.push(o); optExps.push(rawExps[i] || ''); } });
 
+  // 정답이 비었거나 보기 범위를 벗어난 문항은 오답 처리를 유발하므로 제외한다
+  const answerNo = Number(row['정답']);
+  if (!Number.isInteger(answerNo) || answerNo < 1 || answerNo > opts.length) return null;
+
   return {
     id: row.id,
     subject: row['과목'] || '', chapter: row['챕터'] || '',
     difficulty: row['난이도'] || '', q,
     opts, optExps,
-    answer: (row['정답'] || 1) - 1,
+    answer: answerNo - 1,
     exp: row['해설'] || '',
     keywords: row['관련키워드'] || []
   };
