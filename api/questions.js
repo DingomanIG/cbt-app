@@ -14,10 +14,10 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
-  const { subjects, dbKey = 'mock' } = req.body || {};
+  const { subjects, dbKeys = ['mock'] } = req.body || {};
 
-  const table = TABLES[dbKey];
-  if (!table) {
+  const tables = dbKeys.map((k) => TABLES[k]);
+  if (tables.some((t) => !t)) {
     return res.status(400).json({ error: '알 수 없는 dbKey입니다' });
   }
 
@@ -27,16 +27,20 @@ export default async function handler(req, res) {
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-  let query = supabase.from(table).select('*').eq('반영금지', false);
-  if (subjects && subjects.length > 0) {
-    query = query.in('과목', subjects);
+  const queries = tables.map((table) => {
+    let query = supabase.from(table).select('*').eq('반영금지', false);
+    if (subjects && subjects.length > 0) {
+      query = query.in('과목', subjects);
+    }
+    return query;
+  });
+
+  const responses = await Promise.all(queries);
+
+  const failed = responses.find((r) => r.error);
+  if (failed) {
+    return res.status(500).json({ error: failed.error.message });
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    return res.status(500).json({ error: error.message });
-  }
-
-  return res.status(200).json({ results: data });
+  return res.status(200).json({ results: responses.flatMap((r) => r.data) });
 }

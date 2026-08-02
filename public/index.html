@@ -945,11 +945,11 @@ function retryFromResult() {
 }
 
 /* ── 문제 fetch (Vercel API 경유) ── */
-async function fetchQuestionsFromDb(dbKey) {
+async function fetchAllQuestions(dbKeys) {
   const res = await fetch('/api/questions', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ subjects: selectedSubjects, dbKey })
+    body: JSON.stringify({ subjects: selectedSubjects, dbKeys })
   });
   if (!res.ok) {
     const err = await res.json();
@@ -957,13 +957,6 @@ async function fetchQuestionsFromDb(dbKey) {
   }
   const data = await res.json();
   return data.results || [];
-}
-async function fetchAllQuestions(dbKeys) {
-  let all = [];
-  for (const dbKey of dbKeys) {
-    all = all.concat(await fetchQuestionsFromDb(dbKey));
-  }
-  return all;
 }
 
 /* ── 요약노트 fetch (Vercel API 경유) ── */
