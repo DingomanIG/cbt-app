@@ -777,22 +777,23 @@ async function migrateLocalData() {
   const starred = readStore(STARRED_KEY, {});
   const history = readStore(EXAM_HISTORY_KEY, []);
   const localQs = [...Object.values(wrong), ...Object.values(starred)].filter(q => q && q.id);
-  if (localQs.length === 0 && history.length === 0) return 0;
+  if (localQs.length === 0 && history.length === 0) return { moved: 0, kept: 0 };
 
   const unknown = [...new Set(localQs.filter(q => !q.source).map(q => q.id))];
   const sourceById = unknown.length ? await resolveSources(unknown) : new Map();
 
   const marks = new Map();
-  const add = (q, flag) => {
+  const kept = { wrong: {}, starred: {} }; // 출처를 못 찾아 못 옮긴 항목
+  const add = (q, flag, bucket) => {
     if (!q || !q.id) return;
     const source = q.source || sourceById.get(q.id);
-    if (!source) return; // 원본에서 사라진 문항은 건너뛴다
+    if (!source) { kept[bucket][q.id] = q; return; }
     const m = marks.get(q.id) || { source, is_wrong: false, is_starred: false };
     m[flag] = true;
     marks.set(q.id, m);
   };
-  Object.values(wrong).forEach(q => add(q, 'is_wrong'));
-  Object.values(starred).forEach(q => add(q, 'is_starred'));
+  Object.values(wrong).forEach(q => add(q, 'is_wrong', 'wrong'));
+  Object.values(starred).forEach(q => add(q, 'is_starred', 'starred'));
 
   const markRows = [...marks].map(([question_id, m]) => ({ user_id: currentUser.id, question_id, ...m }));
   const histRows = history
@@ -815,11 +816,17 @@ async function migrateLocalData() {
     const { error } = await SB.from('user_exam_history').insert(histRows);
     if (error) throw new Error(error.message);
   }
-  // 업로드가 확인된 뒤에만 기기 데이터를 비운다
-  localStorage.removeItem(WRONG_NOTES_KEY);
-  localStorage.removeItem(STARRED_KEY);
+  // 업로드가 확인된 항목만 기기에서 지운다.
+  // 옮기지 못한 항목은 남겨두고 다음 로그인 때 다시 시도한다 (지우면 복구할 방법이 없다)
+  const keptWrong = Object.keys(kept.wrong).length;
+  const keptStarred = Object.keys(kept.starred).length;
+  if (keptWrong) writeStore(WRONG_NOTES_KEY, kept.wrong);
+  else localStorage.removeItem(WRONG_NOTES_KEY);
+  if (keptStarred) writeStore(STARRED_KEY, kept.starred);
+  else localStorage.removeItem(STARRED_KEY);
   localStorage.removeItem(EXAM_HISTORY_KEY);
-  return markRows.length + histRows.length;
+
+  return { moved: markRows.length + histRows.length, kept: keptWrong + keptStarred };
 }
 
 function renderAccountBar(msg) {
@@ -852,16 +859,19 @@ async function signOut() {
 async function onSignedIn(user) {
   currentUser = user;
   renderAccountBar('동기화 중…');
-  let moved = 0;
+  let result = { moved: 0, kept: 0 };
   try {
-    moved = await migrateLocalData();
+    result = await migrateLocalData();
     await loadAccountData();
   } catch (e) {
     console.warn('계정 동기화 실패:', e.message);
-    renderAccountBar('동기화 실패');
+    renderAccountBar('동기화 실패 — 기기 기록은 그대로 있습니다');
     return;
   }
-  renderAccountBar(moved > 0 ? `${moved}건을 계정으로 옮겼습니다` : '');
+  const msg = result.kept > 0
+    ? `${result.moved}건 이동, ${result.kept}건은 다음에 다시 시도합니다`
+    : (result.moved > 0 ? `${result.moved}건을 계정으로 옮겼습니다` : '');
+  renderAccountBar(msg);
 }
 
 async function initAuth() {
