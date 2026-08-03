@@ -534,6 +534,46 @@
   .lock-card .l-title svg { color: var(--accent-deep); flex-shrink: 0; }
   .lock-card .l-sub { font-size: 12.5px; color: var(--text-sub); margin-top: 6px; line-height: 1.6; }
   .lock-card .l-cta { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); margin-top: 4px; }
+  /* 목록 화면 안에서는 문제 화면용 좌우 여백이 필요 없다 */
+  .start-body .lock-card { margin: 0 0 14px; }
+
+  /* ── 요약노트 목록 ── */
+  .note-filter {
+    display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px;
+    padding-bottom: 2px; scrollbar-width: none;
+  }
+  .note-filter::-webkit-scrollbar { display: none; }
+  .note-chip {
+    flex-shrink: 0; padding: 8px 14px; border-radius: 999px;
+    border: 1.5px solid var(--border); background: var(--card);
+    font-size: 13px; font-weight: 700; color: var(--text-sub);
+    font-family: inherit; cursor: pointer;
+  }
+  .note-chip.selected { border-color: var(--primary); background: var(--opt-sel); color: var(--primary); }
+
+  .note-search {
+    width: 100%; padding: 13px 16px; margin-bottom: 14px;
+    border: 1.5px solid var(--border); border-radius: 14px;
+    background: var(--card); color: var(--text);
+    font-size: 14px; font-family: inherit;
+  }
+  .note-search:focus { outline: none; border-color: var(--primary); }
+  .note-search::placeholder { color: var(--arrow); }
+
+  .note-item {
+    background: var(--card); border-radius: 16px; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  .note-head { display: flex; align-items: center; gap: 10px; padding: 15px 16px; cursor: pointer; }
+  .note-head .n-title { font-size: 14.5px; font-weight: 700; line-height: 1.5; }
+  .note-head .n-mark { margin-left: auto; flex-shrink: 0; display: flex; color: var(--arrow); }
+  .note-head .n-mark svg { transition: transform .18s; }
+  .note-item.open .n-mark svg { transform: rotate(90deg); }
+  /* 잠긴 항목은 펼쳐지지 않는다 — 자물쇠를 눌러도 구매 안내로만 간다 */
+  .note-item.locked .n-mark { color: var(--accent-deep); }
+  .note-body { display: none; padding: 0 16px 16px; }
+  .note-item.open .note-body { display: block; }
+  .note-body .summary-note-card { margin: 0; }
 </style>
 </head>
 <body>
@@ -581,6 +621,12 @@
         <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21.5z"/></svg></div>
         <div class="info"><h3>단원별 연습</h3><p>과목을 선택해 집중 학습</p></div>
         <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
+      </div>
+      <div class="menu-card" onclick="goToSummaryNotes()">
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h10.5L20 6.5V21H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v4h4"/><line x1="9" y1="12" x2="16" y2="12"/><line x1="9" y1="16" x2="13.5" y2="16"/></svg></div>
+        <div class="info"><h3>요약노트 보기</h3><p>과목별 핵심 정리를 한눈에</p></div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="tag" id="home-note-tag">프로</div>
       </div>
       <div class="menu-card" onclick="goToWrongNote()">
         <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v2H9z"/><path d="M8.5 12.5l2 2 4-4.2"/><line x1="8.5" y1="16.5" x2="15.5" y2="16.5"/></svg></div>
@@ -760,6 +806,19 @@
     </div>
   </div>
 
+  <!-- 요약노트 -->
+  <div class="screen" id="screen-summary-notes">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>요약노트</h2>
+        <p>과목별 핵심 정리를 모아봤습니다</p>
+      </div>
+      <div class="start-body">
+        <div id="summary-notes-body"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 나의 풀이결과 -->
   <div class="screen" id="screen-results">
     <div class="start-screen">
@@ -862,6 +921,7 @@ const ICONS = {
   settings: SVG_OPEN + '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1l-.3-2.4h-4l-.3 2.4a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 1.7 1l.3 2.4h4l.3-2.4a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4z"/></svg>',
   lock:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
   close: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  chev:  '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
   pass:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M8 12.3l2.7 2.7L16 9.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   fail:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M9 9l6 6M15 9l-6 6" stroke-linecap="round"/></svg>',
   book:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21.5z"/></svg>',
@@ -918,10 +978,21 @@ async function loadEntitlement() {
 }
 
 /* 권한이 바뀌면 요약노트를 다시 받아야 한다.
-   (무료일 때 받은 빈 목록이 로그인 후에도 세션 내내 굳어버리는 것을 막는다) */
+   (무료일 때 받은 제목뿐인 목록이 로그인 후에도 세션 내내 굳어버리는 것을 막는다) */
 function resetProContent() {
   SUMMARY_NOTES = [];
   summaryNotesLoaded = false;
+  summaryNotesLocked = true;
+  syncHomeProBadge();
+  // 열려 있는 요약노트 화면은 새 권한으로 다시 그린다
+  if (document.getElementById('screen-summary-notes').classList.contains('active')) {
+    renderSummaryNotesScreen();
+  }
+}
+
+/* 홈 메뉴의 "프로" 뱃지는 무료일 때만 붙인다 */
+function syncHomeProBadge() {
+  document.getElementById('home-note-tag').style.display = isPro() ? 'none' : '';
 }
 
 /* 서버가 프로 여부를 판정할 수 있도록 세션 토큰을 실어 보낸다. 비로그인이면 헤더 없음 */
@@ -1218,10 +1289,10 @@ function renderProScreen() {
         </div>
         <div class="pro-benefit">
           <h5>주제별 요약노트</h5>
-          <p>문제와 연결된 암기 포인트를 정답 확인 직후에 바로 보여줍니다. 틀린 문제 하나가 그 단원 전체 정리로 이어집니다.</p>
+          <p>문제와 연결된 암기 포인트를 정답 확인 직후에 바로 보여줍니다. 홈의 요약노트 목록에서 과목별로 몰아서 읽을 수도 있습니다.</p>
           <div class="cmp">
-            <span class="free">무료 · 제공 안 됨</span>
-            <span class="paid">프로 · 문제마다 자동 연결</span>
+            <span class="free">무료 · 제목만</span>
+            <span class="paid">프로 · 본문 전체 열람</span>
           </div>
         </div>
       </div>
@@ -1557,6 +1628,7 @@ const TAB_BY_SCREEN = {
   'screen-start': 'home',
   'screen-gisul-start': 'home',
   'screen-chapter-start': 'home',
+  'screen-summary-notes': 'home',
   'screen-wrong-note': 'wrong',
   'screen-star-list': 'star',
   'screen-results': 'results',
@@ -1700,7 +1772,7 @@ function beginReview(questions, mode = 'review') {
   document.getElementById('timer').style.display = 'none';
   renderQ();
   goTo('screen-exam');
-  loadSummaryNotes();
+  loadSummaryNotesQuietly();
 }
 function startWrongReview() {
   const notes = Object.values(getWrongNotes());
@@ -1753,6 +1825,132 @@ function startSingleStarReview(id) {
   beginReview([note], 'starReview');
 }
 
+/* ── 요약노트 목록 ──
+   무료도 제목·과목·키워드까지는 본다. 본문은 서버가 아예 내려주지 않으므로
+   여기서 "가리는" 것이 아니라 애초에 그릴 내용이 없다. */
+const NOTE_SUBJECTS = ['기초조리실무', '위생관리', '재료관리', '구매관리', '한식조리실무', '안전관리'];
+const summaryFilter = { subject: '', query: '' };
+let summaryNotesError = '';
+let noteSearchFocused = false;
+const openNoteIds = new Set();
+
+function goToSummaryNotes() {
+  noteSearchFocused = false; // 들어오자마자 모바일 키보드가 올라오지 않게
+  if (!summaryNotesLoaded) summaryNotesError = '';
+  goTo('screen-summary-notes');
+  renderSummaryNotesScreen();
+  if (!summaryNotesLoaded) {
+    loadSummaryNotes()
+      .catch(e => { summaryNotesError = e.message || '요약노트를 불러오지 못했습니다'; })
+      .then(() => {
+        // 그 사이 다른 화면으로 넘어갔으면 그릴 필요가 없다
+        if (document.getElementById('screen-summary-notes').classList.contains('active')) {
+          renderSummaryNotesScreen();
+        }
+      });
+  }
+}
+
+function filteredSummaryNotes() {
+  const q = summaryFilter.query.trim().toLowerCase();
+  return SUMMARY_NOTES.filter(n => {
+    if (summaryFilter.subject && n.subject !== summaryFilter.subject) return false;
+    if (!q) return true;
+    return n.title.toLowerCase().includes(q)
+        || n.keywords.some(k => String(k).toLowerCase().includes(q));
+  });
+}
+
+function renderSummaryNotesScreen() {
+  const body = document.getElementById('summary-notes-body');
+  const backBtn = `<div class="bottom-actions"><button class="btn-back" onclick="goTo('screen-home')">←</button></div>`;
+
+  if (summaryNotesError) {
+    body.innerHTML = `
+      <div class="error-box">${esc(summaryNotesError)}</div>
+      <div class="bottom-actions">
+        <button class="btn-back" onclick="goTo('screen-home')">←</button>
+        <button class="btn-start" id="btn-retry-notes">다시 시도</button>
+      </div>`;
+    return;
+  }
+  if (!summaryNotesLoaded) {
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:48px 0">
+        <div class="spinner"></div>
+        <p style="font-size:13.5px;color:var(--text-sub)">요약노트를 불러오는 중…</p>
+      </div>`;
+    return;
+  }
+  if (SUMMARY_NOTES.length === 0) {
+    body.innerHTML = `
+      <div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">아직 등록된 요약노트가 없습니다.</div>
+      ${backBtn}`;
+    return;
+  }
+
+  const locked = summaryNotesLocked;
+  const lockHtml = locked
+    ? `<div class="lock-card" data-act="pro">
+        <div class="l-title">${ICONS.lock} 요약노트 본문은 프로 버전</div>
+        <div class="l-sub">제목은 모두 볼 수 있습니다. 각 노트의 암기 포인트 본문은 프로 버전에서 열립니다.</div>
+        <div class="l-cta">자세히 보기 ›</div>
+      </div>`
+    : '';
+
+  const chips = ['', ...NOTE_SUBJECTS].map(s =>
+    `<button class="note-chip ${summaryFilter.subject === s ? 'selected' : ''}" data-subject="${esc(s)}">${s ? esc(s) : '전체'}</button>`
+  ).join('');
+
+  const notes = filteredSummaryNotes();
+  const list = notes.length === 0
+    ? `<div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">조건에 맞는 요약노트가 없습니다.</div>`
+    : `<div style="display:flex;flex-direction:column;gap:10px">${notes.map(n => noteItemHtml(n, locked)).join('')}</div>`;
+
+  body.innerHTML = `
+    ${lockHtml}
+    <div class="note-filter">${chips}</div>
+    <input class="note-search" id="note-search" type="search" placeholder="제목·키워드 검색"
+           value="${esc(summaryFilter.query)}" autocomplete="off">
+    <div class="setting-section">
+      <h4>요약노트 (${notes.length}개)</h4>
+      ${list}
+    </div>
+    ${backBtn}`;
+
+  // 검색창은 매 입력마다 다시 그리므로 커서를 원래 자리로 되돌려 놓는다
+  const input = document.getElementById('note-search');
+  input.addEventListener('input', onNoteSearchInput);
+  if (noteSearchFocused) {
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+}
+
+function noteItemHtml(n, locked) {
+  const open = !locked && openNoteIds.has(n.id);
+  const mark = locked ? ICONS.lock : ICONS.chev;
+  // bodyHtml만 유일하게 HTML로 삽입한다 (동기화 시점에 이스케이프된 값)
+  const bodyHtml = locked ? '' : `
+    <div class="note-body">
+      <div class="summary-note-card">${n.bodyHtml || '<div class="note-bullet">본문이 아직 준비되지 않았습니다.</div>'}</div>
+    </div>`;
+  return `<div class="note-item ${open ? 'open' : ''} ${locked ? 'locked' : ''}" data-id="${esc(n.id)}">
+    <div class="note-head">
+      <div class="q-subject" style="color:${subjColor(n.subject)};background:${subjBg(n.subject)}">${esc(n.subject)}</div>
+      <div class="n-title">${esc(n.title)}</div>
+      <div class="n-mark">${mark}</div>
+    </div>
+    ${bodyHtml}
+  </div>`;
+}
+
+function onNoteSearchInput(e) {
+  summaryFilter.query = e.target.value;
+  noteSearchFocused = true;
+  renderSummaryNotesScreen();
+}
+
 function retryFromResult() {
   if (examMode === 'chapter') goTo('screen-chapter-start');
   else if (examMode === 'review') { renderWrongNoteList(); goTo('screen-wrong-note'); }
@@ -1782,9 +1980,12 @@ async function errorMessage(res, fallback) {
   return `${fallback} (오류 ${res.status})`;
 }
 
-/* ── 요약노트 fetch (Vercel API 경유) ── */
+/* ── 요약노트 fetch (Vercel API 경유) ──
+   무료 응답에는 제목·과목·키워드만 들어 있고 본문(content_html)이 없다.
+   따라서 무료도 목록은 받아야 하며, 잠금 여부는 서버가 준 locked를 그대로 쓴다. */
 let SUMMARY_NOTES = [];
 let summaryNotesLoaded = false;
+let summaryNotesLocked = true;
 async function fetchAllSummaryNotes() {
   const res = await fetch('/api/summary-notes', {
     method: 'POST',
@@ -1793,24 +1994,33 @@ async function fetchAllSummaryNotes() {
   });
   if (!res.ok) throw new Error(await errorMessage(res, '요약노트를 불러오지 못했습니다'));
   const data = await res.json();
-  return (data.results || []).map(parseSummaryNote);
+  return {
+    notes: (data.results || []).map(parseSummaryNote),
+    locked: data.locked !== false,
+  };
 }
-let summaryNotesLoading = false;
-async function loadSummaryNotes() {
+/* 진행 중인 요청을 붙들어 둔다. 예전에는 로딩 중이면 그냥 return 해서,
+   목록 화면처럼 "로딩이 끝나기를 기다려야 하는" 호출자가 빈손으로 돌아갔다. */
+let summaryNotesPromise = null;
+function loadSummaryNotes() {
   // 성공했을 때만 완료로 표시한다. 예전에는 실패해도 완료 처리해서
   // 네트워크가 한 번 끊기면 그 세션 내내 요약노트가 나오지 않았다.
-  if (summaryNotesLoaded || summaryNotesLoading) return;
-  if (!isPro()) return; // 서버도 빈 목록을 주지만, 굳이 요청까지 보낼 이유는 없다
-  summaryNotesLoading = true;
-  try {
-    SUMMARY_NOTES = await fetchAllSummaryNotes();
-    summaryNotesLoaded = true;
-    if (document.getElementById('screen-exam')?.classList.contains('active')) renderQ();
-  } catch(e) {
-    console.warn('요약노트 로드 실패, 다음에 다시 시도합니다:', e.message);
-  } finally {
-    summaryNotesLoading = false;
+  if (summaryNotesLoaded) return Promise.resolve();
+  if (!summaryNotesPromise) {
+    summaryNotesPromise = (async () => {
+      const { notes, locked } = await fetchAllSummaryNotes();
+      SUMMARY_NOTES = notes;
+      summaryNotesLocked = locked;
+      summaryNotesLoaded = true;
+      if (document.getElementById('screen-exam')?.classList.contains('active')) renderQ();
+    })().finally(() => { summaryNotesPromise = null; });
   }
+  return summaryNotesPromise;
+}
+/* 시험 화면은 요약노트가 늦게 와도 그만이다. 실패를 삼키는 쪽은 여기로 부른다 */
+function loadSummaryNotesQuietly() {
+  loadSummaryNotes().catch(e =>
+    console.warn('요약노트 로드 실패, 다음에 다시 시도합니다:', e.message));
 }
 function findNoteFor(q) {
   const qKeywords = q.keywords || [];
@@ -1905,7 +2115,7 @@ async function startExam() {
     updateTimer();
     renderQ();
     goTo('screen-exam');
-    loadSummaryNotes();
+    loadSummaryNotesQuietly();
   } catch(e) {
     if (examMode === 'chapter') {
       goTo('screen-chapter-start');
@@ -1943,7 +2153,7 @@ function resumeExam(mode) {
   updateTimer();
   renderQ();
   goTo('screen-exam');
-  loadSummaryNotes();
+  loadSummaryNotesQuietly();
 }
 const PROGRESS_MODE_LABELS = { mock: 'CBT 기출예상문제', gisul: '기출문제', chapter: '단원별 연습' };
 function progressLabel(snap) {
@@ -2058,7 +2268,9 @@ function renderQ() {
   const checkBtn = (sel !== null && !rev)
     ? `<button class="check-btn" onclick="revealAnswer()">정답 확인하기</button>` : '';
 
-  const note = rev && isPro() ? findNoteFor(q) : null;
+  // 본문이 없는 노트(무료 응답의 제목뿐인 행)는 빈 카드가 되므로 그리지 않는다.
+  // 클라이언트는 프로라고 믿는데 서버가 잠근 경우 — 토큰 만료 등 — 가 여기 걸린다.
+  const note = rev && isPro() && !summaryNotesLocked ? findNoteFor(q) : null;
   // bodyHtml만 유일하게 HTML로 삽입한다 (동기화 시점에 이스케이프된 값)
   const noteHtml = note
     ? `<div class="summary-note-card">
@@ -2268,9 +2480,25 @@ delegate('pro-body', '[data-act]', el => {
   }
 });
 delegate('exam-body', '.lock-card', () => goToPro('screen-exam'));
+delegate('summary-notes-body', '.lock-card', () => goToPro('screen-summary-notes'));
+delegate('summary-notes-body', '#btn-retry-notes', () => goToSummaryNotes());
+delegate('summary-notes-body', '.note-chip', el => {
+  summaryFilter.subject = el.dataset.subject;
+  noteSearchFocused = false;
+  renderSummaryNotesScreen();
+});
+delegate('summary-notes-body', '.note-head', el => {
+  const item = el.closest('.note-item');
+  // 잠긴 노트는 펼치는 대신 구매 안내로 보낸다
+  if (item.classList.contains('locked')) { goToPro('screen-summary-notes'); return; }
+  const id = item.dataset.id;
+  if (openNoteIds.has(id)) openNoteIds.delete(id); else openNoteIds.add(id);
+  item.classList.toggle('open');
+});
 
 renderTabBar();
 syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
+syncHomeProBadge();        // 권한 조회 전에는 무료로 본다
 maybeShowOnboarding();     // 첫 방문이면 온보딩으로 덮는다
 initAuth();
 

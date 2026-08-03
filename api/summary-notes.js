@@ -1,7 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 import { isProRequest } from './_entitlement.js';
 
-const COLUMNS = ['id', '제목', '과목', '관련키워드', 'content_html'].join(',');
+// 무료 응답에는 content_html을 아예 담지 않는다. 목록을 훑고 검색하는 데 필요한
+// 제목·과목·키워드까지만 내려가고, 본문은 프로에서만 나간다.
+const FREE_COLUMNS = ['id', '제목', '과목', '관련키워드'].join(',');
+const PRO_COLUMNS  = `${FREE_COLUMNS},content_html`;
 const PAGE_SIZE = 1000; // Supabase(PostgREST) 기본 max-rows
 
 export default async function handler(req, res) {
@@ -26,15 +29,14 @@ export default async function handler(req, res) {
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-    // 요약노트는 프로 전용이다. 무료는 에러가 아니라 빈 목록을 받고,
-    // 화면에는 클라이언트가 잠금 안내 카드를 그린다.
-    if (!(await isProRequest(supabase, req))) {
-      return res.status(200).json({ results: [] });
-    }
+    // 요약노트 본문은 프로 전용이다. 무료는 에러가 아니라 제목 목록만 받고,
+    // 화면에는 클라이언트가 잠금 안내를 함께 그린다.
+    const isPro = await isProRequest(supabase, req);
+    const columns = isPro ? PRO_COLUMNS : FREE_COLUMNS;
 
     const rows = [];
     for (let from = 0; ; from += PAGE_SIZE) {
-      let query = supabase.from('summary_notes').select(COLUMNS).eq('반영금지', false);
+      let query = supabase.from('summary_notes').select(columns).eq('반영금지', false);
       if (subjects.length > 0) query = query.in('과목', subjects);
 
       const { data, error } = await query.order('id').range(from, from + PAGE_SIZE - 1);
@@ -44,7 +46,7 @@ export default async function handler(req, res) {
       if (data.length < PAGE_SIZE) break;
     }
 
-    return res.status(200).json({ results: rows });
+    return res.status(200).json({ results: rows, locked: !isPro });
   } catch (e) {
     return res.status(500).json({ error: e.message || '요약노트를 불러오지 못했습니다' });
   }
