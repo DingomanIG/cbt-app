@@ -538,18 +538,20 @@
   .start-body .lock-card { margin: 0 0 14px; }
 
   /* ── 요약노트 목록 ── */
-  .note-filter {
-    display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px;
-    padding-bottom: 2px; scrollbar-width: none;
-  }
-  .note-filter::-webkit-scrollbar { display: none; }
+  /* 과목이 7개뿐이라 가로 스크롤보다 두 줄로 다 보여주는 편이 낫다 */
+  .note-filter { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
   .note-chip {
-    flex-shrink: 0; padding: 8px 14px; border-radius: 999px;
+    padding: 7px 12px; border-radius: 999px;
     border: 1.5px solid var(--border); background: var(--card);
-    font-size: 13px; font-weight: 700; color: var(--text-sub);
-    font-family: inherit; cursor: pointer;
+    font-size: 12.5px; font-weight: 700; color: var(--text-sub);
+    font-family: inherit; cursor: pointer; white-space: nowrap;
   }
   .note-chip.selected { border-color: var(--primary); background: var(--opt-sel); color: var(--primary); }
+  /* 좁은 기기에서 "안전관리" 하나가 셋째 줄로 밀려나지 않을 만큼만 조인다 */
+  @media (max-width: 359px) {
+    .note-filter { gap: 6px; }
+    .note-chip { padding: 7px 9px; font-size: 12px; }
+  }
 
   .note-search {
     width: 100%; padding: 13px 16px; margin-bottom: 14px;
@@ -1851,14 +1853,23 @@ function goToSummaryNotes() {
   }
 }
 
+/* 목록은 위 칩과 같은 과목 순으로 늘어놓는다. 서버는 id 순으로 주기 때문에
+   그대로 두면 과목이 뒤섞여 나온다. 표에 없는 과목은 뒤로 보낸다. */
+function subjectRank(subject) {
+  const i = NOTE_SUBJECTS.indexOf(subject);
+  return i === -1 ? NOTE_SUBJECTS.length : i;
+}
 function filteredSummaryNotes() {
   const q = summaryFilter.query.trim().toLowerCase();
-  return SUMMARY_NOTES.filter(n => {
-    if (summaryFilter.subject && n.subject !== summaryFilter.subject) return false;
-    if (!q) return true;
-    return n.title.toLowerCase().includes(q)
-        || n.keywords.some(k => String(k).toLowerCase().includes(q));
-  });
+  return SUMMARY_NOTES
+    .filter(n => {
+      if (summaryFilter.subject && n.subject !== summaryFilter.subject) return false;
+      if (!q) return true;
+      return n.title.toLowerCase().includes(q)
+          || n.keywords.some(k => String(k).toLowerCase().includes(q));
+    })
+    // 같은 과목 안에서는 서버가 준 순서(id)를 그대로 둔다 — sort는 안정 정렬이다
+    .sort((a, b) => subjectRank(a.subject) - subjectRank(b.subject));
 }
 
 function renderSummaryNotesScreen() {
