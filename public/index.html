@@ -5,36 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>한식조리기능사 CBT</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
+  /* 팔레트는 디자인 핸드오프의 oklch 값을 sRGB로 옮긴 것이다.
+     oklch를 그대로 쓰면 구형 인앱 웹뷰(카카오톡 등)에서 색이 통째로 무효가 되고,
+     `${color}18` 같은 알파 접미사 트릭도 hex에서만 성립한다. */
   :root {
-    --primary: #1A5C38;
-    --primary-lt: #2E7D52;
-    --accent: #F5A623;
-    --accent-lt: #FFF3DC;
-    --bg: #F5F6F8;
+    --primary: #00421F;       /* oklch(33% .09 155) 딥그린 */
+    --accent: #DA950B;        /* oklch(72% .15 75)  앰버 */
+    --accent-text: #B37000;   /* oklch(60% .15 75) */
+    --accent-deep: #7E4700;   /* oklch(45% .13 75) */
+    --accent-lt: #FFEBD1;
+    --bg: #FAF8F5;
+    --bg-outer: #EAE7E3;
     --card: #FFFFFF;
-    --text: #1A1A1A;
-    --text-sub: #6B7280;
-    --border: #E5E7EB;
-    --correct: #16A34A;
-    --wrong: #DC2626;
-    --correct-bg: #F0FDF4;
-    --wrong-bg: #FEF2F2;
-    --opt-sel: #E6F4EE;
-    --neutral-bg: #EEF2F6;
-    --neutral-text: #4B5768;
-    --summary-bg: #FFF0E5;
-    --summary-border: #F08A3C;
-    --summary-title: #B85C1A;
-    --summary-text: #6B3A12;
+    --text: #14110D;
+    --text-sub: #5B5752;
+    --border: #E0DDDA;
+    --chip-bg: #EDEBE7;
+    --track: #E7E4E0;
+    --arrow: #A29E98;
+    --tab-idle: #78746E;
+    --correct: #1B7E2A;
+    --wrong: #C92F33;
+    --correct-bg: #E6F8E6;
+    --wrong-bg: #FFEBE8;
+    --correct-text: #003908;
+    --wrong-text: #73000D;
+    --opt-sel: #D9EEDF;
+    --opt-border: #DAD7D3;
+    --neutral-bg: #F4F1ED;
+    --neutral-text: #5B5752;
+    --summary-bg: #FFEFDA;
+    --summary-border: #DA950B;
+    --summary-title: #B37000;
+    --summary-text: #7E4700;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
     font-family: 'Noto Sans KR', sans-serif;
-    background: var(--bg);
+    background: var(--bg-outer);
     color: var(--text);
     min-height: 100vh;
     display: flex;
@@ -54,57 +66,79 @@
   .screen { display: none; flex-direction: column; flex: 1; }
   .screen.active { display: flex; }
 
+  /* ── 온보딩 ── */
+  .onboarding {
+    flex: 1; position: relative; background: #000;
+    display: flex; flex-direction: column; cursor: pointer;
+  }
+  .onboarding .ob-photo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .onboarding .ob-shade {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(10,20,15,.55) 65%, #06180E 92%);
+  }
+  .onboarding .ob-copy { position: relative; margin-top: auto; padding: 0 28px 44px; color: #fff; }
+  .onboarding .ob-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.16); border-radius: 20px;
+    padding: 5px 13px; font-size: 12px; font-weight: 700; margin-bottom: 14px;
+  }
+  .onboarding h1 { font-size: 28px; font-weight: 800; line-height: 1.35; margin-bottom: 10px; }
+  .onboarding p  { font-size: 14px; opacity: .85; line-height: 1.6; }
+
   /* ── 홈 ── */
   .home-header {
     background: var(--primary);
-    padding: 52px 24px 28px;
+    padding: 52px 24px 30px;
     color: #fff;
   }
   .home-header .badge {
     display: inline-flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,.15);
-    border-radius: 20px; padding: 4px 12px;
-    font-size: 11px; font-weight: 600;
-    margin-bottom: 14px;
+    border-radius: 20px; padding: 5px 13px;
+    font-size: 12px; font-weight: 700; letter-spacing: .3px;
+    margin-bottom: 16px;
   }
-  .home-header h1 { font-size: 22px; font-weight: 700; line-height: 1.35; }
-  .home-header p  { font-size: 13px; opacity: .75; margin-top: 6px; }
+  .home-header h1 { font-size: 24px; font-weight: 800; line-height: 1.4; }
+  .home-header p  { font-size: 14px; opacity: .8; margin-top: 8px; line-height: 1.5; }
 
   .home-stats {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
     gap: 1px; background: var(--border);
-    margin: 0 16px; border-radius: 14px; overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
-    transform: translateY(-20px);
+    margin: 0 16px; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    transform: translateY(-22px);
   }
-  .stat-box { background: var(--card); padding: 14px 10px; text-align: center; }
-  .stat-box .val { font-size: 20px; font-weight: 700; color: var(--primary); }
-  .stat-box .lbl { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+  .stat-box { background: var(--card); padding: 16px 8px; text-align: center; }
+  .stat-box .val { font-size: 21px; font-weight: 800; color: var(--primary); }
+  .stat-box .lbl { font-size: 11px; font-weight: 600; color: var(--text-sub); margin-top: 3px; }
 
-  .home-menu { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .home-menu { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; margin-top: -14px; }
   .menu-card {
-    background: var(--card); border-radius: 14px;
-    padding: 18px 20px; display: flex; align-items: center; gap: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer;
+    background: var(--card); border-radius: 16px;
+    padding: 20px; display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07); cursor: pointer;
     border: 2px solid transparent; transition: border .15s;
     position: relative;
   }
   .menu-card.featured { border-color: var(--primary); }
   .menu-card:active { transform: scale(.98); }
   .menu-card .icon {
-    width: 46px; height: 46px; border-radius: 12px;
+    width: 48px; height: 48px; border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; flex-shrink: 0;
+    flex-shrink: 0;
+    background: var(--bg-outer); color: var(--primary);
   }
-  .menu-card.featured .icon { background: var(--primary); }
-  .menu-card:not(.featured) .icon { background: var(--bg); }
-  .menu-card .info h3 { font-size: 15px; font-weight: 700; }
-  .menu-card .info p  { font-size: 12px; color: var(--text-sub); margin-top: 3px; }
-  .menu-card .arrow { margin-left: auto; font-size: 18px; color: var(--text-sub); }
+  .menu-card.featured .icon { background: var(--primary); color: #fff; }
+  .menu-card .info h3 { font-size: 16px; font-weight: 700; }
+  .menu-card .info p  { font-size: 13px; color: var(--text-sub); margin-top: 4px; line-height: 1.4; }
+  .menu-card .arrow { margin-left: auto; color: var(--arrow); display: flex; flex-shrink: 0; }
   .menu-card .tag {
-    position: absolute; top: 12px; right: 12px;
+    position: absolute; top: 14px; right: 14px;
     background: var(--accent); color: #fff;
-    font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 10px;
   }
 
   .home-progress { padding: 0 16px 4px; }
@@ -122,43 +156,43 @@
 
   /* ── 설정 ── */
   .start-screen { background: var(--primary); flex: 1; display: flex; flex-direction: column; }
-  .start-top { padding: 52px 24px 32px; color: #fff; }
-  .start-top h2 { font-size: 24px; font-weight: 700; }
-  .start-top p  { opacity: .7; font-size: 13px; margin-top: 6px; }
-  .start-body { background: var(--bg); border-radius: 28px 28px 0 0; flex: 1; padding: 28px 20px; overflow-y: auto; }
+  .start-top { padding: 52px 24px 30px; color: #fff; }
+  .start-top h2 { font-size: 26px; font-weight: 800; }
+  .start-top p  { opacity: .75; font-size: 14px; margin-top: 8px; line-height: 1.5; }
+  .start-body { background: var(--bg); border-radius: 28px 28px 0 0; flex: 1; padding: 26px 20px; overflow-y: auto; }
 
   .setting-section { margin-bottom: 22px; }
-  .setting-section h4 { font-size: 12px; font-weight: 700; color: var(--text-sub); letter-spacing: .4px; margin-bottom: 10px; }
+  .setting-section h4 { font-size: 13px; font-weight: 800; color: var(--text-sub); letter-spacing: .3px; margin-bottom: 12px; }
 
-  .subject-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .subject-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .subject-btn {
-    background: var(--card); border: 2px solid var(--border); border-radius: 12px;
-    padding: 12px; text-align: center; cursor: pointer; transition: all .15s;
-    font-size: 13px; font-weight: 600; color: var(--text-sub);
+    background: var(--card); border: 2px solid var(--border); border-radius: 14px;
+    padding: 14px; text-align: center; cursor: pointer; transition: all .15s;
+    font-size: 14px; font-weight: 700; color: var(--text-sub);
   }
   .subject-btn.selected { border-color: var(--primary); color: var(--primary); background: var(--opt-sel); }
 
-  .count-row { display: flex; gap: 8px; }
+  .count-row { display: flex; gap: 10px; }
   .count-btn {
-    flex: 1; padding: 12px; border: 2px solid var(--border);
-    border-radius: 12px; background: var(--card);
-    font-size: 14px; font-weight: 700; color: var(--text-sub);
+    flex: 1; padding: 14px; border: 2px solid var(--border);
+    border-radius: 14px; background: var(--card);
+    font-size: 15px; font-weight: 700; color: var(--text-sub);
     cursor: pointer; text-align: center; transition: all .15s;
   }
   .count-btn.selected { border-color: var(--primary); color: var(--primary); background: var(--opt-sel); }
 
   .bottom-actions { display: flex; gap: 10px; margin-top: 8px; }
   .btn-back {
-    flex: 0 0 54px; padding: 18px 0; border: 2px solid var(--border); border-radius: 16px;
+    flex: 0 0 56px; padding: 18px 0; border: 2px solid var(--border); border-radius: 16px;
     background: var(--card); color: var(--text);
     font-size: 18px; font-weight: 700; font-family: inherit;
-    cursor: pointer;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
   .bottom-actions .btn-back:only-child { flex: 1; }
   .btn-start {
     flex: 1; padding: 18px; border: none; border-radius: 16px;
     background: var(--primary); color: #fff;
-    font-size: 16px; font-weight: 700; font-family: inherit;
+    font-size: 16px; font-weight: 800; font-family: inherit;
     cursor: pointer;
   }
 
@@ -177,105 +211,118 @@
 
   /* ── 시험 ── */
   .exam-header { background: var(--primary); padding: 44px 16px 14px; color: #fff; }
-  .exam-top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .exam-top-row .exit { font-size: 13px; opacity: .75; cursor: pointer; }
+  .exam-top-row { position: relative; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .exam-top-row .exit {
+    background: none; border: none; padding: 6px; margin: -6px;
+    color: #fff; cursor: pointer; display: flex; flex: 0 0 auto;
+  }
+  /* 진행 숫자는 좌우 버튼 폭과 무관하게 헤더 정중앙에 놓는다 */
+  .exam-progress {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    display: flex; align-items: baseline; gap: 3px;
+  }
+  .exam-progress .cur   { font-size: 45px; font-weight: 800; line-height: 1; }
+  .exam-progress .total { font-size: 24px; font-weight: 600; opacity: .55; }
   .timer {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,.15); border-radius: 20px;
-    padding: 6px 14px; font-size: 14px; font-weight: 700;
+    padding: 7px 16px; font-size: 15px; font-weight: 800; flex: 0 0 auto;
   }
-  .timer.warning { background: rgba(245,166,35,.4); }
+  .timer.warning { background: rgba(218,149,11,.5); }
   .q-strip {
-    display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px;
+    display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 4px;
     scrollbar-width: none; cursor: grab;
   }
   .q-strip::-webkit-scrollbar { display: none; }
   .q-strip.dragging { cursor: grabbing; user-select: none; }
   .q-chip {
-    position: relative; flex: 0 0 32px; height: 32px; border-radius: 8px;
+    position: relative; flex: 0 0 34px; height: 34px; border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; cursor: pointer;
+    font-size: 13px; font-weight: 800; cursor: pointer;
     background: rgba(255,255,255,.14); color: rgba(255,255,255,.85);
     border: 2px solid transparent;
   }
   .q-chip.answered { background: rgba(255,255,255,.32); color: #fff; }
   .q-chip.current  { background: #fff; color: var(--primary); border-color: var(--accent); }
   .q-chip.flagged::after {
-    content: ''; position: absolute; top: -3px; right: -3px;
-    width: 8px; height: 8px; border-radius: 50%;
+    content: ''; position: absolute; top: -4px; right: -4px;
+    width: 9px; height: 9px; border-radius: 50%;
     background: var(--accent); border: 1px solid var(--primary);
   }
 
-  .exam-body { flex: 1; overflow-y: auto; padding: 0 0 100px; }
+  .exam-body { flex: 1; overflow-y: auto; padding: 0 0 110px; }
 
   .question-card {
-    background: var(--card); margin: 14px 14px 0;
-    border-radius: 18px; padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    background: var(--card); margin: 16px 14px 0;
+    border-radius: 20px; padding: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.07);
   }
-  .q-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .q-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .q-num {
     background: var(--primary); color: #fff;
-    width: 28px; height: 28px; border-radius: 8px;
+    width: 30px; height: 30px; border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; flex-shrink: 0;
+    font-size: 14px; font-weight: 800; flex-shrink: 0;
   }
   .q-subject {
-    font-size: 11px; font-weight: 600; color: var(--primary);
-    background: #E6F4EE; border-radius: 10px; padding: 3px 9px;
+    font-size: 12px; font-weight: 700;
+    border-radius: 10px; padding: 4px 10px;
   }
-  .q-diff { font-size: 10px; color: var(--text-sub); background: var(--bg); border-radius: 10px; padding: 3px 9px; }
-  .question-text { font-size: 15px; font-weight: 600; line-height: 1.65; }
+  .q-diff { font-size: 11px; color: var(--text-sub); background: var(--chip-bg); border-radius: 10px; padding: 4px 10px; }
+  .question-text { font-size: 16.5px; font-weight: 700; line-height: 1.7; }
 
-  .options-list { margin: 10px 14px 0; display: flex; flex-direction: column; gap: 9px; }
+  .options-list { margin: 12px 14px 0; display: flex; flex-direction: column; gap: 10px; }
   .opt-block { display: flex; flex-direction: column; }
   .option-item {
-    background: var(--card); border-radius: 14px; padding: 15px;
+    background: var(--card); border-radius: 16px; padding: 16px;
     display: flex; align-items: center; gap: 14px;
     cursor: pointer; border: 2px solid transparent;
     transition: border .15s, background .15s;
-    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
   }
   .option-item:active { transform: scale(.985); }
   .option-item.selected { border-color: var(--primary); background: var(--opt-sel); }
   .option-item.correct  { border-color: var(--correct); background: var(--correct-bg); }
   .option-item.wrong    { border-color: var(--wrong);   background: var(--wrong-bg); }
-  .option-item.has-explain { border-radius: 14px 14px 0 0; }
+  .option-item.idle     { border-color: var(--opt-border); }
+  .option-item.has-explain { border-radius: 16px 16px 0 0; border-bottom: none; }
   .opt-num {
-    width: 30px; height: 30px; border-radius: 50%;
+    width: 32px; height: 32px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700;
-    background: var(--bg); color: var(--text-sub);
+    font-size: 14px; font-weight: 800;
+    background: var(--chip-bg); color: var(--text-sub);
     flex-shrink: 0; transition: all .15s;
   }
   .option-item.selected .opt-num { background: var(--primary); color: #fff; }
   .option-item.correct  .opt-num { background: var(--correct); color: #fff; }
   .option-item.wrong    .opt-num { background: var(--wrong);   color: #fff; }
-  .opt-text { font-size: 14px; line-height: 1.5; font-weight: 500; }
-  .opt-icon { margin-left: auto; font-size: 16px; flex-shrink: 0; }
+  .opt-text { font-size: 15px; line-height: 1.6; font-weight: 600; flex: 1; }
+  .opt-icon { margin-left: auto; font-size: 17px; flex-shrink: 0; }
 
+  /* 보기 카드와 그 해설은 테두리를 공유해 한 덩어리로 보이게 한다 */
   .opt-explain {
-    padding: 11px 15px; font-size: 12.5px; line-height: 1.6;
-    border-radius: 0 0 14px 14px;
-    margin-top: -2px;
+    padding: 12px 16px; font-size: 13px; line-height: 1.7;
+    border: 2px solid transparent; border-top: none;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
   }
-  .opt-explain.correct { background: var(--correct-bg); color: #14532D; }
-  .opt-explain.wrong    { background: var(--wrong-bg);   color: #7F1D1D; }
-  .opt-explain.neutral  { background: var(--neutral-bg); color: var(--neutral-text); }
+  .opt-explain.correct { background: var(--correct-bg); color: var(--correct-text); border-color: var(--correct); }
+  .opt-explain.wrong   { background: var(--wrong-bg);   color: var(--wrong-text);   border-color: var(--wrong); }
+  .opt-explain.neutral { background: var(--neutral-bg); color: var(--neutral-text); border-color: var(--opt-border); }
 
   .explanation-card {
     background: var(--accent-lt); border-left: 3px solid var(--accent);
-    border-radius: 14px; margin: 10px 14px 0;
-    padding: 14px 16px; display: none;
+    border-radius: 16px; margin: 12px 14px 0;
+    padding: 16px 18px; display: none;
   }
   .explanation-card.show { display: block; }
-  .explanation-card .ex-title { font-size: 11px; font-weight: 700; color: #B8830A; margin-bottom: 6px; }
-  .explanation-card .ex-text  { font-size: 13px; line-height: 1.65; color: #7A5000; }
+  .explanation-card .ex-title { font-size: 12px; font-weight: 800; color: var(--accent-text); margin-bottom: 7px; }
+  .explanation-card .ex-text  { font-size: 13.5px; line-height: 1.7; color: var(--accent-deep); }
 
   .summary-note-card {
     background: var(--summary-bg); border-left: 3px solid var(--summary-border);
-    border-radius: 14px; margin: 10px 14px 0;
-    padding: 14px 16px;
+    border-radius: 16px; margin: 12px 14px 0;
+    padding: 16px 18px;
   }
   .summary-note-card .note-title { font-size: 13px; font-weight: 700; color: var(--summary-title); margin-bottom: 8px; }
   .summary-note-card .note-sub-title { font-size: 12.5px; font-weight: 700; color: var(--summary-title); margin: 8px 0 2px; }
@@ -284,94 +331,105 @@
   .summary-note-card .note-bullet::before { content: '·'; position: absolute; left: 0; }
 
   .check-btn {
-    width: calc(100% - 28px); margin: 10px 14px 0; padding: 13px;
-    border: 2px solid var(--primary); border-radius: 12px;
+    width: calc(100% - 28px); margin: 12px 14px 0; padding: 15px;
+    border: 2px solid var(--primary); border-radius: 14px;
     background: transparent; color: var(--primary);
-    font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+    font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer;
   }
 
-  .flag-btn {
-    margin-left: auto; font-size: 14px; color: var(--text-sub);
+  .flag-btn, .star-btn {
+    color: var(--text-sub);
     background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
     cursor: pointer; flex-shrink: 0;
   }
-  .flag-btn.active { background: var(--accent-lt); border-color: var(--accent); }
-
-  .star-btn {
-    font-size: 14px; color: var(--text-sub);
-    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0;
-  }
-  .star-btn.active { background: var(--opt-sel); border-color: var(--primary); }
+  .flag-btn { margin-left: 0; }
+  .flag-btn.active { background: var(--accent-lt); border-color: var(--accent); color: var(--accent-text); }
+  .star-btn.active { background: var(--accent-lt); border-color: var(--accent); color: var(--accent-text); }
 
   .exam-nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 390px;
     background: var(--card); border-top: 1px solid var(--border);
-    padding: 12px 16px 28px;
+    padding: 14px 16px 30px;
     display: flex; align-items: center; gap: 10px;
   }
   .nav-btn {
-    flex: 1; padding: 14px; border: 2px solid var(--border);
-    border-radius: 12px; background: var(--card);
-    font-size: 14px; font-weight: 600; font-family: inherit;
+    flex: 1; padding: 15px; border: 2px solid var(--border);
+    border-radius: 14px; background: var(--card);
+    font-size: 15px; font-weight: 700; font-family: inherit;
     color: var(--text); cursor: pointer;
   }
   .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
-  .nav-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); flex: 2; }
+  .nav-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); flex: 2; font-weight: 800; }
   .nav-btn:active:not(:disabled) { transform: scale(.97); }
-  .nav-flag-btn { flex: 0 0 46px; padding: 14px 0; font-size: 16px; color: var(--accent); border-color: var(--accent); }
+  /* 라벨을 붙여 "체크한 문제로 이동"임을 드러낸다 (체크 토글은 문제 카드 안 깃발 버튼) */
+  .nav-flag-btn {
+    flex: 0 0 68px; padding: 9px 0 8px;
+    border-color: var(--accent); color: var(--accent-text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .nav-flag-btn .nf-label { font-size: 10px; font-weight: 700; }
 
   /* ── 결과 ── */
-  .result-screen { background: var(--bg); flex: 1; overflow-y: auto; padding-bottom: 32px; }
-  .result-header { background: var(--primary); padding: 52px 24px 80px; text-align: center; color: #fff; }
-  .result-header .result-emoji { font-size: 52px; margin-bottom: 10px; }
-  .result-header h2 { font-size: 24px; font-weight: 700; }
-  .result-header p  { opacity: .75; font-size: 14px; margin-top: 6px; }
+  .result-screen { background: var(--bg); flex: 1; overflow-y: auto; padding-bottom: 36px; }
+  .result-header { background: var(--primary); padding: 52px 24px 84px; text-align: center; color: #fff; }
+  .result-header .result-mark { margin-bottom: 14px; display: flex; justify-content: center; }
+  .result-header h2 { font-size: 25px; font-weight: 800; }
+  .result-header p  { opacity: .8; font-size: 14px; margin-top: 8px; }
 
   .score-card {
-    background: var(--card); margin: -44px 16px 0;
-    border-radius: 20px; padding: 28px 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.1); text-align: center;
+    background: var(--card); margin: -48px 16px 0;
+    border-radius: 22px; padding: 30px 24px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.12); text-align: center;
   }
   .score-ring {
-    width: 120px; height: 120px; border-radius: 50%;
-    border: 8px solid var(--border); margin: 0 auto 16px;
+    width: 132px; height: 132px; border-radius: 50%;
+    border: 9px solid var(--border); margin: 0 auto 18px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
   .score-ring.pass { border-color: var(--correct); }
   .score-ring.fail { border-color: var(--wrong); }
-  .score-ring .score-num { font-size: 32px; font-weight: 700; }
-  .score-ring .score-unit { font-size: 12px; color: var(--text-sub); }
+  .score-ring .score-num { font-size: 36px; font-weight: 800; }
+  .score-ring .score-unit { font-size: 13px; font-weight: 600; color: var(--text-sub); }
   .pass-badge {
-    display: inline-block; padding: 6px 20px; border-radius: 20px;
-    font-size: 14px; font-weight: 700;
+    display: inline-block; padding: 7px 22px; border-radius: 20px;
+    font-size: 15px; font-weight: 800;
   }
-  .pass-badge.pass { background: var(--correct-bg); color: var(--correct); }
+  .pass-badge.pass { background: var(--correct-bg); color: #006818; }
   .pass-badge.fail { background: var(--wrong-bg);   color: var(--wrong); }
 
-  .result-details { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .detail-card { background: var(--card); border-radius: 16px; padding: 16px 18px; }
-  .detail-card h4 { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; }
+  .result-details { padding: 18px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+  .detail-card { background: var(--card); border-radius: 18px; padding: 20px; }
+  .detail-card h4 { font-size: 14px; font-weight: 800; color: var(--text-sub); margin-bottom: 14px; }
   .wrong-item, .star-item { cursor: pointer; }
   .wrong-item:active, .star-item:active { transform: scale(.98); }
-  .subject-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .subject-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .subject-row:last-child { margin-bottom: 0; }
-  .subject-row .s-name { font-size: 12px; font-weight: 500; width: 90px; flex-shrink: 0; }
-  .s-bar { flex: 1; height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; }
-  .s-fill { height: 100%; border-radius: 4px; }
-  .s-pct { font-size: 12px; font-weight: 700; width: 34px; text-align: right; }
+  .subject-row .s-name { font-size: 13px; font-weight: 600; width: 96px; flex-shrink: 0; }
+  .s-bar { flex: 1; height: 9px; background: var(--track); border-radius: 5px; overflow: hidden; }
+  .s-fill { height: 100%; border-radius: 5px; }
+  .s-pct { font-size: 13px; font-weight: 800; width: 38px; text-align: right; }
 
-  .result-actions { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
-  .btn-retry { width: 100%; padding: 17px; border: none; border-radius: 14px; background: var(--primary); color: #fff; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; }
-  .btn-home  { width: 100%; padding: 17px; border: 2px solid var(--border); border-radius: 14px; background: var(--card); color: var(--text); font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; }
+  .result-actions { padding: 20px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+  .btn-retry { width: 100%; padding: 18px; border: none; border-radius: 16px; background: var(--primary); color: #fff; font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
+  .btn-home  { width: 100%; padding: 18px; border: 2px solid var(--border); border-radius: 16px; background: var(--card); color: var(--text); font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; }
+
+  /* ── 목록(오답노트·즐겨찾기) ── */
+  .list-item { position: relative; }
+  .list-item .li-top { display: flex; align-items: center; margin-bottom: 10px; }
+  .li-remove {
+    margin-left: auto; background: var(--chip-bg); border: none;
+    border-radius: 9px; width: 28px; height: 28px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-sub); cursor: pointer;
+  }
+  .li-remove:active { transform: scale(.92); }
 
   .error-box {
-    background: var(--wrong-bg); border: 1px solid #FCA5A5;
-    border-radius: 14px; padding: 16px; margin-bottom: 16px;
-    font-size: 13px; color: var(--wrong); text-align: center; line-height: 1.6;
+    background: var(--wrong-bg); border: 1px solid #F0A9A6;
+    border-radius: 16px; padding: 18px; margin-bottom: 16px;
+    font-size: 13.5px; color: var(--wrong); text-align: center; line-height: 1.6;
   }
 
   /* ── 하단 탭 바 ──
@@ -387,97 +445,117 @@
   .tab-item {
     flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
     padding: 3px 0; background: none; border: none;
-    font-family: inherit; color: var(--text-sub); cursor: pointer;
+    font-family: inherit; color: var(--tab-idle); cursor: pointer;
   }
-  .tab-item .t-icon { font-size: 18px; line-height: 1; filter: grayscale(1); opacity: .55; }
-  .tab-item .t-label { font-size: 10px; font-weight: 600; }
+  .tab-item .t-icon { display: flex; line-height: 1; }
+  .tab-item .t-label { font-size: 10px; font-weight: 700; }
   .tab-item.active { color: var(--primary); }
-  .tab-item.active .t-icon { filter: none; opacity: 1; }
+  /* 즐겨찾기 탭만 활성 시 별을 채운다 */
+  .tab-item.active[data-tab="star"] .t-icon svg { fill: currentColor; }
   .tab-item:active { transform: scale(.95); }
 
   /* ── 설정 ── */
   .account-card {
     background: var(--primary); color: #fff;
-    border-radius: 16px; padding: 16px 18px;
+    border-radius: 16px; padding: 18px 20px;
   }
   .account-card .a-label { font-size: 11px; opacity: .7; }
   .account-card .a-name {
-    font-size: 15px; font-weight: 700; margin-top: 2px;
+    font-size: 16px; font-weight: 700; margin-top: 3px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .account-card .a-msg { font-size: 11px; opacity: .8; margin-top: 8px; line-height: 1.5; }
-  .account-card .a-actions { display: flex; gap: 8px; margin-top: 13px; }
+  .account-card .a-msg { font-size: 12px; opacity: .8; margin-top: 10px; line-height: 1.5; }
+  .account-card .a-actions { display: flex; gap: 8px; margin-top: 14px; }
   .acct-btn {
     background: rgba(255,255,255,.18); color: #fff;
-    border: none; border-radius: 20px; padding: 9px 15px;
-    font-size: 12px; font-weight: 600; font-family: inherit; cursor: pointer;
+    border: none; border-radius: 14px; padding: 10px 16px;
+    font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
   }
   .acct-btn:active { transform: scale(.97); }
   .acct-btn.kakao { background: #FEE500; color: #191600; }
 
   .settings-list { display: flex; flex-direction: column; gap: 8px; }
   .settings-row {
-    width: 100%; background: var(--card); border: none; border-radius: 14px;
-    padding: 15px 16px; display: flex; align-items: center; gap: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.05); cursor: pointer;
-    font-size: 14px; font-weight: 600; font-family: inherit;
+    width: 100%; background: var(--card); border: 2px solid var(--border); border-radius: 14px;
+    padding: 15px 16px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    font-size: 14px; font-weight: 700; font-family: inherit;
     color: var(--text); text-align: left; text-decoration: none;
   }
   .settings-row:active { transform: scale(.99); }
-  .settings-row .s-right { margin-left: auto; font-size: 13px; font-weight: 700; color: var(--text-sub); }
-  .settings-row.pro { border: 2px solid var(--accent); }
-  .settings-row.pro .s-right { color: var(--accent); }
+  .settings-row .s-right { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--arrow); }
+  .settings-row.pro { border-color: var(--accent); }
+  .settings-row.pro .s-right { color: var(--accent-text); }
   .settings-row.danger { color: var(--wrong); }
   .settings-row.static { cursor: default; }
-  .settings-hint { font-size: 11.5px; color: var(--text-sub); line-height: 1.6; padding: 4px 4px 0; }
+  .settings-hint { font-size: 12px; color: var(--text-sub); line-height: 1.6; padding: 8px 4px 0; }
 
   /* ── 프로 버전 ── */
   .pro-hero {
-    background: linear-gradient(155deg, #F7B733 0%, #F08A3C 100%);
-    color: #fff; border-radius: 18px; padding: 22px 20px; text-align: center;
+    background: linear-gradient(155deg, #E8A81E 0%, #C06A00 100%);
+    color: #fff; border-radius: 20px; padding: 24px 20px; text-align: center;
   }
-  .pro-hero .p-kicker { font-size: 12.5px; font-weight: 600; opacity: .9; }
-  .pro-hero .p-head { font-size: 20px; font-weight: 700; margin-top: 5px; }
-  .pro-hero .p-price { margin-top: 14px; font-size: 30px; font-weight: 700; }
+  .pro-hero .p-kicker { font-size: 13px; font-weight: 700; opacity: .9; }
+  .pro-hero .p-head { font-size: 21px; font-weight: 800; margin-top: 5px; }
+  .pro-hero .p-price { margin-top: 14px; font-size: 32px; font-weight: 800; }
   .pro-hero .p-price s { font-size: 15px; font-weight: 400; opacity: .7; margin-right: 8px; }
-  .pro-hero .p-price small { font-size: 13px; font-weight: 600; }
+  .pro-hero .p-price small { font-size: 13px; font-weight: 700; }
 
   .pro-benefit {
-    background: var(--card); border-radius: 14px; padding: 15px 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    background: var(--card); border-radius: 16px; padding: 17px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
   }
-  .pro-benefit h5 { font-size: 14px; font-weight: 700; }
-  .pro-benefit p { font-size: 12.5px; line-height: 1.6; color: var(--text-sub); margin-top: 5px; }
-  .pro-benefit .cmp { display: flex; gap: 8px; margin-top: 10px; font-size: 11.5px; flex-wrap: wrap; }
-  .pro-benefit .cmp span { border-radius: 8px; padding: 4px 9px; }
+  .pro-benefit h5 { font-size: 15px; font-weight: 700; }
+  .pro-benefit p { font-size: 13px; line-height: 1.6; color: var(--text-sub); margin-top: 6px; }
+  .pro-benefit .cmp { display: flex; gap: 8px; margin-top: 11px; font-size: 12px; flex-wrap: wrap; }
+  .pro-benefit .cmp span { border-radius: 8px; padding: 4px 10px; }
   .pro-benefit .cmp .free { background: var(--neutral-bg); color: var(--neutral-text); }
-  .pro-benefit .cmp .paid { background: var(--accent-lt); color: #B8830A; font-weight: 700; }
+  .pro-benefit .cmp .paid { background: var(--accent-lt); color: var(--accent-text); font-weight: 800; }
 
   .btn-upgrade {
-    flex: 1; padding: 17px; border: none; border-radius: 14px;
+    flex: 1; padding: 17px; border: none; border-radius: 16px;
     background: var(--accent); color: #fff;
-    font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer;
+    font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer;
   }
   .btn-upgrade:disabled { background: var(--border); color: var(--text-sub); cursor: default; }
 
-  /* 프로 전용 콘텐츠 자리에 놓이는 잠금 안내 */
+  /* 프로 전용 콘텐츠 자리에 놓이는 잠금 안내.
+     실제 해설·요약노트는 서버가 무료 응답에서 빼고 내려주므로 가릴 본문 자체가 없다. */
   .lock-card {
     background: var(--accent-lt); border: 1px dashed var(--accent);
-    border-radius: 14px; margin: 10px 14px 0; padding: 14px 16px;
+    border-radius: 16px; margin: 12px 14px 0; padding: 16px 18px;
     text-align: center; cursor: pointer;
   }
   .lock-card:active { transform: scale(.99); }
-  .lock-card .l-title { font-size: 13px; font-weight: 700; color: #B8830A; }
-  .lock-card .l-sub { font-size: 11.5px; color: #9A7212; margin-top: 4px; line-height: 1.5; }
+  .lock-card .l-title {
+    font-size: 14px; font-weight: 800; color: #312D28;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .lock-card .l-title svg { color: var(--accent-deep); flex-shrink: 0; }
+  .lock-card .l-sub { font-size: 12.5px; color: var(--text-sub); margin-top: 6px; line-height: 1.6; }
+  .lock-card .l-cta { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); margin-top: 4px; }
 </style>
 </head>
 <body>
 <div class="phone-wrap">
 
+  <!-- 온보딩 (첫 방문에만 뜬다. 3초 뒤 자동 이동, 누르면 즉시 이동) -->
+  <div class="screen" id="screen-onboarding">
+    <div class="onboarding" onclick="leaveOnboarding()">
+      <img class="ob-photo" src="/assets/onboarding.jpg" alt="">
+      <div class="ob-shade"></div>
+      <div class="ob-copy">
+        <div class="ob-badge">한식조리기능사 필기</div>
+        <h1>최신 한식조리기능사<br>합격노트</h1>
+        <p>최신 기출과 예상문제로,<br>합격까지 가장 빠른 길을 걸어보세요.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- 홈 -->
   <div class="screen active" id="screen-home">
     <div class="home-header">
-      <div class="badge">🍳 한식조리기능사</div>
+      <div class="badge">한식조리기능사</div>
       <h1>필기 CBT<br>기출예상문제</h1>
       <p>실제 출제 예상 문제로 합격을 준비하세요</p>
     </div>
@@ -489,69 +567,35 @@
     <div class="home-progress" id="home-progress" style="display:none"></div>
     <div class="home-menu">
       <div class="menu-card featured" onclick="goToMockStart()">
-        <div class="icon">📝</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="8.5" y1="16" x2="13" y2="16"/></svg></div>
         <div class="info"><h3>CBT 기출예상문제</h3><p>실제 문제로 시험 연습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
         <div class="tag">추천</div>
       </div>
       <div class="menu-card" onclick="goToGisulStart()">
-        <div class="icon">🎯</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></div>
         <div class="info"><h3>기출문제</h3><p>최근 시행된 기출문제로 실전 연습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
       <div class="menu-card" onclick="goToChapterStart()">
-        <div class="icon">📖</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21.5z"/></svg></div>
         <div class="info"><h3>단원별 연습</h3><p>과목을 선택해 집중 학습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
       <div class="menu-card" onclick="goToWrongNote()">
-        <div class="icon">📋</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v2H9z"/><path d="M8.5 12.5l2 2 4-4.2"/><line x1="8.5" y1="16.5" x2="15.5" y2="16.5"/></svg></div>
         <div class="info"><h3>오답노트</h3><p>틀린 문제만 모아서 복습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
       <div class="menu-card" onclick="goToStarList()">
-        <div class="icon">⭐</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></div>
         <div class="info"><h3>즐겨찾기</h3><p>내가 표시한 문제만 모아보기</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
       <div class="menu-card" onclick="goToResults()">
-        <div class="icon">📊</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="19" x2="6" y2="12"/><line x1="12" y1="19" x2="12" y2="6"/><line x1="18" y1="19" x2="18" y2="10"/></svg></div>
         <div class="info"><h3>나의 풀이결과</h3><p>누적 풀이 통계 확인하기</p></div>
-        <div class="arrow">›</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 문제풀이 (하단 탭) -->
-  <div class="screen" id="screen-practice">
-    <div class="start-screen">
-      <div class="start-top">
-        <h2>문제풀이</h2>
-        <p>원하는 방식으로 문제를 풀어보세요</p>
-      </div>
-      <div class="start-body">
-        <div class="home-menu" style="padding:0">
-          <div class="menu-card featured" onclick="goToMockStart()">
-            <div class="icon">📝</div>
-            <div class="info"><h3>CBT 기출예상문제</h3><p>실제 문제로 시험 연습</p></div>
-            <div class="arrow">›</div>
-          </div>
-          <div class="menu-card" onclick="goToGisulStart()">
-            <div class="icon">🎯</div>
-            <div class="info"><h3>기출문제</h3><p>최근 시행된 기출문제로 실전 연습</p></div>
-            <div class="arrow">›</div>
-          </div>
-          <div class="menu-card" onclick="goToChapterStart()">
-            <div class="icon">📖</div>
-            <div class="info"><h3>단원별 연습</h3><p>과목을 선택해 집중 학습</p></div>
-            <div class="arrow">›</div>
-          </div>
-          <div class="menu-card" onclick="goToStarList()">
-            <div class="icon">⭐</div>
-            <div class="info"><h3>즐겨찾기</h3><p>내가 표시한 문제만 모아보기</p></div>
-            <div class="arrow">›</div>
-          </div>
-        </div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
     </div>
   </div>
@@ -741,14 +785,18 @@
   <div class="screen" id="screen-exam">
     <div class="exam-header">
       <div class="exam-top-row">
-        <span class="exit" onclick="confirmExit()">✕ 종료</span>
-        <div class="timer" id="timer">⏱ <span id="timer-text">60:00</span></div>
+        <button class="exit" onclick="confirmExit()" aria-label="시험 종료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
+        <div class="exam-progress"><span class="cur" id="q-progress-cur">1</span><span class="total" id="q-progress-total">/10</span></div>
+        <div class="timer" id="timer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg> <span id="timer-text">60:00</span></div>
       </div>
       <div class="q-strip" id="q-strip"></div>
     </div>
     <div class="exam-body" id="exam-body"></div>
     <div class="exam-nav">
-      <button class="nav-btn nav-flag-btn" id="btn-flag-jump" onclick="jumpToFlagged()" title="체크한 문제로 이동">🚩</button>
+      <button class="nav-btn nav-flag-btn" id="btn-flag-jump" onclick="jumpToFlagged()" title="체크한 문제로 이동">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4.5L18 13H5"/></svg>
+        <span class="nf-label">문제체크</span>
+      </button>
       <button class="nav-btn" id="btn-prev" onclick="prevQ()">‹ 이전</button>
       <button class="nav-btn primary" id="btn-next" onclick="nextQ()">다음 ›</button>
     </div>
@@ -758,7 +806,7 @@
   <div class="screen" id="screen-result">
     <div class="result-screen">
       <div class="result-header">
-        <div class="result-emoji" id="result-emoji">🎉</div>
+        <div class="result-mark" id="result-mark"></div>
         <h2 id="result-title">수고하셨습니다!</h2>
         <p id="result-subtitle">최종 결과를 확인하세요</p>
       </div>
@@ -787,12 +835,40 @@
 </div>
 <script src="/vendor/supabase.js"></script>
 <script>
-/* ── 상수 ── */
+/* ── 상수 ──
+   과목 색은 명도·채도를 고정하고 색상(hue)만 다르게 둔 디자인 팔레트다.
+   태그 배경은 같은 hue의 밝은 톤을 따로 표에 둔다. 예전처럼 `${색}18`로
+   알파를 이어 붙이면 색 형식이 바뀔 때 통째로 무효가 되기 때문이다. */
 const SUBJ_COLOR = {
-  '기초조리실무':'#3B82F6','위생관리':'#EF4444','재료관리':'#EAB308',
-  '구매관리':'#22C55E','한식조리실무':'#8B5CF6','안전관리':'#F97316'
+  '기초조리실무':'#116BB5','위생관리':'#B33736','재료관리':'#847200',
+  '구매관리':'#1E7729','한식조리실무':'#714CA6','안전관리':'#B74D00'
 };
-const DIFF_COLOR = {'하':'#22C55E','중':'#EAB308','상':'#EF4444'};
+const SUBJ_BG = {
+  '기초조리실무':'#DDEDFF','위생관리':'#FFE4E1','재료관리':'#FFED84',
+  '구매관리':'#BDFFBE','한식조리실무':'#EEE7FF','안전관리':'#FFE5D7'
+};
+const SUBJ_FALLBACK = '#5B5752', SUBJ_BG_FALLBACK = '#EDEBE7';
+const subjColor = s => SUBJ_COLOR[s] || SUBJ_FALLBACK;
+const subjBg    = s => SUBJ_BG[s]    || SUBJ_BG_FALLBACK;
+const DIFF_COLOR = {'하':'#1B7E2A','중':'#847200','상':'#C92F33'};
+
+/* 아이콘은 전부 인라인 SVG다 (이모지는 기기마다 모양·색이 달라진다) */
+const SVG_OPEN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';
+const ICONS = {
+  home:  SVG_OPEN + '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/></svg>',
+  wrong: SVG_OPEN + '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v2H9z"/><path d="M8.5 12.5l2 2 4-4.2"/><line x1="8.5" y1="16.5" x2="15.5" y2="16.5"/></svg>',
+  star:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  stats: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="19" x2="6" y2="12"/><line x1="12" y1="19" x2="12" y2="6"/><line x1="18" y1="19" x2="18" y2="10"/></svg>',
+  settings: SVG_OPEN + '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1l-.3-2.4h-4l-.3 2.4a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 1.7 1l.3 2.4h4l.3-2.4a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4z"/></svg>',
+  lock:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  close: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  pass:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M8 12.3l2.7 2.7L16 9.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  fail:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M9 9l6 6M15 9l-6 6" stroke-linecap="round"/></svg>',
+  book:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21.5z"/></svg>',
+};
+/* 문제 카드의 별·깃발은 채움 여부로 상태를 나타낸다 */
+const starIcon = on => `<svg width="16" height="16" viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const flagIcon = on => `<svg width="15" height="15" viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4.5L18 13H5"/></svg>`;
 
 /* ── 상태 ── */
 let QUESTIONS = [], answers = [], revealed = [], flagged = [];
@@ -1041,9 +1117,10 @@ function renderSettings(msg) {
          </div>
        </div>`;
 
+  const crown = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" style="color:var(--accent);flex-shrink:0"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5z"/></svg>`;
   const proRow = isPro()
-    ? `<div class="settings-row pro static"><span>👑</span> 프로 버전<span class="s-right">이용중 ✓</span></div>`
-    : `<button class="settings-row pro" data-act="pro"><span>👑</span> 프로 버전 구매<span class="s-right">${PRO_PRICE.toLocaleString()}원</span></button>`;
+    ? `<div class="settings-row pro static">${crown} 프로 버전<span class="s-right">이용중 ✓</span></div>`
+    : `<button class="settings-row pro" data-act="pro">${crown} 프로 버전 구매<span class="s-right">${PRO_PRICE.toLocaleString()}원</span></button>`;
 
   el.innerHTML = `
     <div class="setting-section">
@@ -1057,7 +1134,7 @@ function renderSettings(msg) {
     <div class="setting-section">
       <h4>데이터</h4>
       <div class="settings-list">
-        <button class="settings-row danger" data-act="reset"><span>♻️</span> 학습 데이터 초기화</button>
+        <button class="settings-row danger" data-act="reset">학습 데이터 초기화<span class="s-right">›</span></button>
       </div>
       <div class="settings-hint">${isSignedIn()
         ? '오답노트·즐겨찾기·풀이기록은 계정에 자동 저장됩니다. 따로 백업하지 않아도 됩니다.'
@@ -1066,7 +1143,7 @@ function renderSettings(msg) {
     <div class="setting-section">
       <h4>문의</h4>
       <div class="settings-list">
-        <a class="settings-row" href="mailto:bonekatana@gmail.com?subject=%ED%95%9C%EC%8B%9D%EC%A1%B0%EB%A6%AC%EA%B8%B0%EB%8A%A5%EC%82%AC%20CBT%20%EB%AC%B8%EC%9D%98"><span>✉️</span> 문의하기<span class="s-right">›</span></a>
+        <a class="settings-row" href="mailto:bonekatana@gmail.com?subject=%ED%95%9C%EC%8B%9D%EC%A1%B0%EB%A6%AC%EA%B8%B0%EB%8A%A5%EC%82%AC%20CBT%20%EB%AC%B8%EC%9D%98">문의하기<span class="s-right">›</span></a>
       </div>
     </div>`;
 }
@@ -1132,7 +1209,7 @@ function renderProScreen() {
       <h4>프로 버전에서 열리는 기능</h4>
       <div class="settings-list">
         <div class="pro-benefit">
-          <h5>📌 보기별 상세해설</h5>
+          <h5>보기별 상세해설</h5>
           <p>정답만이 아니라 1~4번 보기 하나하나에 왜 맞고 왜 틀렸는지가 붙습니다. 헷갈리는 보기를 그 자리에서 정리할 수 있습니다.</p>
           <div class="cmp">
             <span class="free">무료 · 총평 해설</span>
@@ -1140,7 +1217,7 @@ function renderProScreen() {
           </div>
         </div>
         <div class="pro-benefit">
-          <h5>📝 주제별 요약노트</h5>
+          <h5>주제별 요약노트</h5>
           <p>문제와 연결된 암기 포인트를 정답 확인 직후에 바로 보여줍니다. 틀린 문제 하나가 그 단원 전체 정리로 이어집니다.</p>
           <div class="cmp">
             <span class="free">무료 · 제공 안 됨</span>
@@ -1392,7 +1469,7 @@ function renderResultsScreen() {
   const overallPct = Math.round(totalOk / totalCount * 100);
   const subjRows = Object.entries(subjTotals).map(([subj, d]) => {
     const pct = Math.round(d.ok / d.total * 100);
-    const c = SUBJ_COLOR[subj] || '#6B7280';
+    const c = subjColor(subj);
     return `<div class="subject-row">
       <div class="s-name" style="color:${c}">${esc(subj)}</div>
       <div class="s-bar"><div class="s-fill" style="width:${pct}%;background:${c}"></div></div>
@@ -1438,29 +1515,56 @@ function goTo(id) {
   window.scrollTo(0, 0);
 }
 
+/* ── 온보딩 ──
+   첫 방문에만 띄운다. 매번 3초를 강제하면 재방문자에게는 지연일 뿐이다.
+   로그인 리다이렉트로 돌아온 경우(주소에 code/토큰이 붙어 있다)에도 건너뛴다.
+   그 순간은 이미 앱을 쓰던 중이고, 온보딩이 깜빡였다 사라지기 때문이다. */
+const ONBOARDED_KEY = 'onboardingSeen';
+let onboardTimer = null;
+
+function returningFromAuth() {
+  return new URLSearchParams(location.search).has('code')
+      || location.hash.includes('access_token');
+}
+
+function maybeShowOnboarding() {
+  let seen = true;
+  try { seen = localStorage.getItem(ONBOARDED_KEY) === '1'; } catch(e) {}
+  if (seen || returningFromAuth()) return;
+  goTo('screen-onboarding');
+  onboardTimer = setTimeout(leaveOnboarding, 3000);
+}
+
+function leaveOnboarding() {
+  clearTimeout(onboardTimer);
+  onboardTimer = null;
+  try { localStorage.setItem(ONBOARDED_KEY, '1'); } catch(e) {}
+  goTo('screen-home');
+}
+
 /* ── 하단 탭 ── */
 const TAB_ITEMS = [
-  { key: 'home',     icon: '🏠', label: '홈',       go: () => goTo('screen-home') },
-  { key: 'practice', icon: '📝', label: '문제풀이', go: () => goTo('screen-practice') },
-  { key: 'wrong',    icon: '📋', label: '오답노트', go: () => goToWrongNote() },
-  { key: 'results',  icon: '📊', label: '풀이결과', go: () => goToResults() },
-  { key: 'settings', icon: '⚙️', label: '설정',     go: () => goToSettings() },
+  { key: 'home',     icon: ICONS.home,     label: '홈',       go: () => goTo('screen-home') },
+  { key: 'wrong',    icon: ICONS.wrong,    label: '오답노트', go: () => goToWrongNote() },
+  { key: 'star',     icon: ICONS.star,     label: '즐겨찾기', go: () => goToStarList() },
+  { key: 'results',  icon: ICONS.stats,    label: '풀이결과', go: () => goToResults() },
+  { key: 'settings', icon: ICONS.settings, label: '설정',     go: () => goToSettings() },
 ];
-/* 어느 화면이 어느 탭에 속하는지 — 하위 화면도 상위 탭을 켜둔다 */
+/* 어느 화면이 어느 탭에 속하는지 — 하위 화면도 상위 탭을 켜둔다.
+   시험 설정 화면들은 홈에서만 들어오므로 홈 탭에 묶는다 */
 const TAB_BY_SCREEN = {
   'screen-home': 'home',
-  'screen-practice': 'practice',
-  'screen-start': 'practice',
-  'screen-gisul-start': 'practice',
-  'screen-chapter-start': 'practice',
-  'screen-star-list': 'practice',
+  'screen-start': 'home',
+  'screen-gisul-start': 'home',
+  'screen-chapter-start': 'home',
   'screen-wrong-note': 'wrong',
+  'screen-star-list': 'star',
   'screen-results': 'results',
   'screen-settings': 'settings',
   'screen-pro': 'settings',
 };
-/* 시험 화면의 하단은 .exam-nav가 이미 쓴다. 로딩 중엔 이동시키지 않는다 */
-const TABBAR_HIDDEN = ['screen-exam', 'screen-loading'];
+/* 시험 화면의 하단은 .exam-nav가 이미 쓴다. 온보딩·로딩 중엔 이동시키지 않는다 */
+const TABBAR_HIDDEN = ['screen-onboarding', 'screen-exam', 'screen-loading'];
 
 function renderTabBar() {
   document.getElementById('tab-bar').innerHTML = TAB_ITEMS.map(t =>
@@ -1562,13 +1666,7 @@ function renderWrongNoteList() {
     `;
     return;
   }
-  const items = notes.map(n => {
-    const c = SUBJ_COLOR[n.subject] || '#6B7280';
-    return `<div class="detail-card wrong-item" data-id="${esc(n.id)}">
-      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${esc(n.subject)}</div>
-      <div style="font-size:13px;font-weight:500;line-height:1.5">${esc(n.q)}</div>
-    </div>`;
-  }).join('');
+  const items = notes.map(n => listItemHtml(n, 'wrong-item')).join('');
   body.innerHTML = `
     <div class="setting-section">
       <h4>틀린 문제 (${notes.length}개)</h4>
@@ -1579,6 +1677,17 @@ function renderWrongNoteList() {
       <button class="btn-start" onclick="startWrongReview()">오답 전부 풀기 →</button>
     </div>
   `;
+}
+
+/* 오답노트·즐겨찾기 카드는 형태가 같다. 정답은 어느 쪽에도 노출하지 않는다 */
+function listItemHtml(n, cls) {
+  return `<div class="detail-card list-item ${cls}" data-id="${esc(n.id)}">
+    <div class="li-top">
+      <div class="q-subject" style="color:${subjColor(n.subject)};background:${subjBg(n.subject)}">${esc(n.subject)}</div>
+      <button class="li-remove" data-remove="${esc(n.id)}" aria-label="목록에서 삭제">${ICONS.close}</button>
+    </div>
+    <div style="font-size:15px;font-weight:600;line-height:1.6">${esc(n.q)}</div>
+  </div>`;
 }
 function beginReview(questions, mode = 'review') {
   examMode = mode;
@@ -1621,13 +1730,7 @@ function renderStarList() {
     `;
     return;
   }
-  const items = notes.map(n => {
-    const c = SUBJ_COLOR[n.subject] || '#6B7280';
-    return `<div class="detail-card star-item" data-id="${esc(n.id)}">
-      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${esc(n.subject)}</div>
-      <div style="font-size:13px;font-weight:500;line-height:1.5">${esc(n.q)}</div>
-    </div>`;
-  }).join('');
+  const items = notes.map(n => listItemHtml(n, 'star-item')).join('');
   body.innerHTML = `
     <div class="setting-section">
       <h4>즐겨찾기한 문제 (${notes.length}개)</h4>
@@ -1921,8 +2024,11 @@ function renderQ() {
     btnNext.onclick = nextQ;
   }
 
-  const sc = SUBJ_COLOR[q.subject] || '#6B7280';
-  const dc = DIFF_COLOR[q.difficulty] || '#6B7280';
+  document.getElementById('q-progress-cur').textContent = currentQ + 1;
+  document.getElementById('q-progress-total').textContent = `/${total}`;
+
+  const sc = subjColor(q.subject);
+  const dc = DIFF_COLOR[q.difficulty] || SUBJ_FALLBACK;
 
   // 보기별 상세해설은 프로 전용이다. 무료 사용자는 서버가 해설 필드를 아예 주지 않으므로
   // 보기마다 "준비되지 않았습니다"를 반복하지 않고, 아래에 잠금 카드 하나만 띄운다.
@@ -1932,7 +2038,8 @@ function renderQ() {
     let cls = 'option-item'; let icon = ''; let state = 'neutral';
     if (rev) {
       if (i === q.answer)        { cls += ' correct'; icon = '<span class="opt-icon">✓</span>'; state = 'correct'; }
-      else if (i === sel)        { cls += ' wrong';   icon = '<span class="opt-icon">✗</span>'; state = 'wrong'; }
+      else if (i === sel)        { cls += ' wrong';   icon = '<span class="opt-icon">✕</span>'; state = 'wrong'; }
+      else                       { cls += ' idle'; }
       if (showOptExps) cls += ' has-explain';
     } else if (i === sel)        { cls += ' selected'; }
 
@@ -1955,27 +2062,29 @@ function renderQ() {
   // bodyHtml만 유일하게 HTML로 삽입한다 (동기화 시점에 이스케이프된 값)
   const noteHtml = note
     ? `<div class="summary-note-card">
-        <div class="note-title">📝 ${esc(note.title)}</div>
+        <div class="note-title">${esc(note.title)}</div>
         ${note.bodyHtml}
       </div>`
     : '';
 
   const lockHtml = (rev && !isPro())
     ? `<div class="lock-card" data-act="pro">
-        <div class="l-title">🔒 보기별 상세해설 · 주제별 요약노트</div>
-        <div class="l-sub">보기 1~4번의 개별 해설과 이 문제의 요약노트는 프로 버전에서 열립니다.<br>자세히 보기 ›</div>
+        <div class="l-title">${ICONS.lock} 보기별 상세해설 · 주제별 요약노트</div>
+        <div class="l-sub">보기 1~4번의 개별 해설과 이 문제의 요약노트는 프로 버전에서 열립니다.</div>
+        <div class="l-cta">자세히 보기 ›</div>
       </div>`
     : '';
 
+  const starred = isStarred(q.id);
   document.getElementById('exam-body').innerHTML = `
     <div class="question-card">
       <div class="q-meta">
         <div class="q-num">${currentQ+1}</div>
-        <div class="q-subject" style="color:${sc};background:${sc}18">${esc(q.subject)}</div>
+        <div class="q-subject" style="color:${sc};background:${subjBg(q.subject)}">${esc(q.subject)}</div>
         <div class="q-diff" style="color:${dc}">난이도 ${esc(q.difficulty)}</div>
         <div style="margin-left:auto;display:flex;gap:6px;">
-          <div class="star-btn ${isStarred(q.id) ? 'active' : ''}" onclick="toggleStar()">${isStarred(q.id) ? '⭐' : '☆'}</div>
-          <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()">${flagged[currentQ] ? '🚩' : '🏳️'}</div>
+          <div class="star-btn ${starred ? 'active' : ''}" onclick="toggleStar()" title="즐겨찾기">${starIcon(starred)}</div>
+          <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()" title="문제 체크">${flagIcon(flagged[currentQ])}</div>
         </div>
       </div>
       <div class="question-text">${esc(q.q)}</div>
@@ -1983,7 +2092,7 @@ function renderQ() {
     <div class="options-list">${optsHtml}</div>
     ${checkBtn}
     <div class="explanation-card ${rev ? 'show' : ''}">
-      <div class="ex-title">📌 해설</div>
+      <div class="ex-title">해설</div>
       <div class="ex-text">${esc(q.exp || '해설이 없습니다.')}</div>
     </div>
     ${noteHtml}
@@ -2076,7 +2185,7 @@ function finishExam() {
     addExamHistory({ mode: examMode, correct, total: QUESTIONS.length, score, pass, subjMap, finishedAt: Date.now() });
   }
 
-  document.getElementById('result-emoji').textContent = isReviewUI ? '📚' : (pass ? '🎉' : '😔');
+  document.getElementById('result-mark').innerHTML = isReviewUI ? ICONS.book : (pass ? ICONS.pass : ICONS.fail);
   document.getElementById('result-title').textContent = isReviewUI
     ? '복습 완료!'
     : (pass ? '합격을 축하합니다!' : '아쉽지만 불합격입니다');
@@ -2095,7 +2204,7 @@ function finishExam() {
 
   document.getElementById('subject-bars').innerHTML = Object.entries(subjMap).map(([sub,d])=>{
     const pct = Math.round(d.ok/d.total*100);
-    const c = SUBJ_COLOR[sub]||'#6B7280';
+    const c = subjColor(sub);
     return `<div class="subject-row">
       <div class="s-name" style="color:${c}">${esc(sub)}</div>
       <div class="s-bar"><div class="s-fill" style="width:${pct}%;background:${c}"></div></div>
@@ -2112,11 +2221,30 @@ function finishExam() {
 function delegate(containerId, selector, handler) {
   document.getElementById(containerId).addEventListener('click', (e) => {
     const el = e.target.closest(selector);
-    if (el) handler(el);
+    if (el) handler(el, e);
   });
 }
-delegate('wrong-note-body', '.wrong-item', el => startSingleWrongReview(el.dataset.id));
-delegate('star-list-body',  '.star-item',  el => startSingleStarReview(el.dataset.id));
+/* 삭제 버튼은 카드 안에 있으므로, 카드 클릭(재풀이 시작)과 겹치지 않게 걸러낸다 */
+delegate('wrong-note-body', '.wrong-item', (el, e) => {
+  if (e.target.closest('.li-remove')) return;
+  startSingleWrongReview(el.dataset.id);
+});
+delegate('star-list-body',  '.star-item',  (el, e) => {
+  if (e.target.closest('.li-remove')) return;
+  startSingleStarReview(el.dataset.id);
+});
+/* data-* 는 항상 문자열이지만 문항 id는 숫자일 수 있다.
+   계정 저장소는 id 타입까지 맞아야 지워지므로 원본 값을 찾아 넘긴다 */
+delegate('wrong-note-body', '.li-remove', el => {
+  const note = getWrongNotes()[el.dataset.remove];
+  removeWrongNote(note ? note.id : el.dataset.remove);
+  renderWrongNoteList();
+});
+delegate('star-list-body', '.li-remove', el => {
+  const note = getStarred()[el.dataset.remove];
+  removeStarred(note ? note.id : el.dataset.remove);
+  renderStarList();
+});
 delegate('home-progress',   '.progress-card', el => resumeExam(el.dataset.mode));
 delegate('results-body',    '#btn-clear-history', () => clearExamHistory());
 delegate('tab-bar',         '.tab-item', el => {
@@ -2143,6 +2271,7 @@ delegate('exam-body', '.lock-card', () => goToPro('screen-exam'));
 
 renderTabBar();
 syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
+maybeShowOnboarding();     // 첫 방문이면 온보딩으로 덮는다
 initAuth();
 
 /* 홈의 총 문항 수는 실제 DB 값을 쓴다 (예전엔 "300+"로 고정돼 있었다) */
