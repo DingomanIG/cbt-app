@@ -489,6 +489,7 @@
   .settings-row.danger { color: var(--wrong); }
   .settings-row.static { cursor: default; }
   .settings-hint { font-size: 12px; color: var(--text-sub); line-height: 1.6; padding: 8px 4px 0; }
+  .settings-hint a { color: var(--accent-text); font-weight: 700; text-decoration: none; }
 
   /* ── 프로 버전 ── */
   .pro-hero {
@@ -1261,6 +1262,14 @@ function renderSettings(msg) {
       <div class="settings-list">
         <a class="settings-row" href="mailto:bonekatana@gmail.com?subject=%ED%95%9C%EC%8B%9D%EC%A1%B0%EB%A6%AC%EA%B8%B0%EB%8A%A5%EC%82%AC%20CBT%20%EB%AC%B8%EC%9D%98">문의하기<span class="s-right">›</span></a>
       </div>
+    </div>
+    <div class="setting-section">
+      <h4>약관 및 정책</h4>
+      <div class="settings-list">
+        <a class="settings-row" href="/terms.html">이용약관<span class="s-right">›</span></a>
+        <a class="settings-row" href="/refund.html">환불정책<span class="s-right">›</span></a>
+        <a class="settings-row" href="/privacy.html">개인정보처리방침<span class="s-right">›</span></a>
+      </div>
     </div>`;
 }
 
@@ -1354,6 +1363,11 @@ function renderProScreen() {
         </div>
       </div>
       <div class="settings-hint">문제풀이, 정답 확인, 오답노트, 즐겨찾기, 풀이결과 통계는 무료로 계속 쓸 수 있습니다.</div>
+      <div class="settings-hint">
+        추가 결제 없이 계속 이용하는 1회 결제이며, 자동으로 갱신되지 않습니다.
+        결제 후 프로 전용 해설·요약노트를 열람하면 청약철회가 제한될 수 있습니다.
+        <a href="/terms.html">이용약관</a> · <a href="/refund.html">환불정책</a> · <a href="/privacy.html">개인정보처리방침</a>
+      </div>
     </div>
     <div class="bottom-actions">
       <button class="btn-back" data-act="back">←</button>
