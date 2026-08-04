@@ -520,6 +520,19 @@
   }
   .btn-upgrade:disabled { background: var(--border); color: var(--text-sub); cursor: default; }
 
+  /* 청약철회 제한 동의.
+     환불정책 제3조가 "결제 화면에서 고지하고 동의를 받는다"고 공개적으로 약속했으므로,
+     이 체크 없이는 결제로 넘어갈 수 없어야 한다. */
+  .agree-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--card); border: 2px solid var(--border); border-radius: 14px;
+    padding: 14px 15px; margin-top: 10px; cursor: pointer;
+  }
+  .agree-row.checked { border-color: var(--accent); background: #FFFDF8; }
+  .agree-row input { width: 19px; height: 19px; margin-top: 1px; flex-shrink: 0; accent-color: var(--accent); }
+  .agree-row span { font-size: 12.5px; line-height: 1.65; color: var(--text); }
+  .agree-row a { color: var(--accent-text); font-weight: 700; }
+
   /* 프로 전용 콘텐츠 자리에 놓이는 잠금 안내.
      실제 해설·요약노트는 서버가 무료 응답에서 빼고 내려주므로 가릴 본문 자체가 없다. */
   .lock-card {
@@ -1302,8 +1315,11 @@ async function resetStudyData() {
    시험 도중 잠금 카드를 눌러 들어올 수 있으므로, 돌아갈 화면을 기억해 둔다.
    (시험 화면은 DOM에 그대로 남아 있고 타이머도 계속 도므로 그냥 되돌리면 된다) */
 let proReturnScreen = 'screen-settings';
+/* 청약철회 제한 동의는 결제 한 건에 대한 의사표시다. 화면을 새로 열 때마다 초기화한다 */
+let proAgreed = false;
 function goToPro(from) {
   proReturnScreen = from || 'screen-settings';
+  proAgreed = false;
   renderProScreen();
   goTo('screen-pro');
   refreshEntitlement(); // 결제·수동 부여가 방금 끝났을 수 있다. 바뀌면 화면을 다시 그린다
@@ -1328,10 +1344,22 @@ function renderProScreen() {
     ? `<s>${priceText(PRICING.listPrice)}</s>${priceText(PRICING.price)}<small>(${off}%↓)</small>`
     : '<small>가격을 불러오는 중…</small>';
 
+  // 결제로 넘어갈 수 있는 사람에게만 동의를 받는다.
+  // 이미 프로이거나 비로그인이면 결제 자체가 시작되지 않으므로 물어볼 것이 없다.
+  const needsAgreement = !isPro() && isSignedIn();
+  const agreeHtml = needsAgreement
+    ? `<label class="agree-row ${proAgreed ? 'checked' : ''}">
+         <input type="checkbox" id="pro-agree" ${proAgreed ? 'checked' : ''}>
+         <span>프로 전용 해설·요약노트를 열람하면 청약철회가 제한된다는 점을 확인했으며,
+           <a href="/refund.html" target="_blank" rel="noopener">환불정책</a>과
+           <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>에 동의합니다. (필수)</span>
+       </label>`
+    : '';
+
   const cta = isPro()
     ? `<button class="btn-upgrade" disabled>✓ 이미 이용 중입니다</button>`
     : (isSignedIn()
-      ? `<button class="btn-upgrade" data-act="checkout">업그레이드 하기${PRICING ? ` (${priceText(PRICING.price)})` : ''}</button>`
+      ? `<button class="btn-upgrade" data-act="checkout" ${proAgreed ? '' : 'disabled'}>업그레이드 하기${PRICING ? ` (${priceText(PRICING.price)})` : ''}</button>`
       : `<button class="btn-upgrade" data-act="signin-pro">로그인하고 업그레이드</button>`);
 
   el.innerHTML = `
@@ -1368,6 +1396,7 @@ function renderProScreen() {
         결제 후 프로 전용 해설·요약노트를 열람하면 청약철회가 제한될 수 있습니다.
         <a href="/terms.html">이용약관</a> · <a href="/refund.html">환불정책</a> · <a href="/privacy.html">개인정보처리방침</a>
       </div>
+      ${agreeHtml}
     </div>
     <div class="bottom-actions">
       <button class="btn-back" data-act="back">←</button>
@@ -1376,7 +1405,14 @@ function renderProScreen() {
 }
 
 function startCheckout() {
+  // 버튼이 비활성이라 여기까지 오지 않아야 하지만, 동의 없이 결제가 시작되는 일은
+  // 환불정책 제3조를 어기는 것이라 한 겹 더 막는다.
+  if (!proAgreed) return;
+
   // 결제(PG) 연동 전이다. 지금은 관리자가 user_entitlements에 직접 프로를 부여한다.
+  // 연동 시 여기서 주문을 만들고 토스 결제창을 띄운다.
+  // 결제창의 successUrl/failUrl 은 /payment.html 로 보낸다 — 앱 첫 화면(/)은
+  // 로그인 리다이렉트의 ?code= 를 이미 쓰고 있어서, 토스의 실패 코드(?code=)와 겹친다.
   alert('결제 기능은 준비 중입니다.\n조금만 기다려 주세요!');
 }
 
@@ -2561,6 +2597,12 @@ delegate('pro-body', '[data-act]', el => {
     if (proReturnScreen === 'screen-settings') goToSettings();
     else goTo(proReturnScreen);
   }
+});
+/* 라벨 안쪽을 눌러도 브라우저가 체크박스로 클릭을 넘겨주므로, 체크박스 하나만 듣는다.
+   (.agree-row 전체를 들으면 라벨 클릭과 전달된 클릭이 겹쳐 두 번 토글된다) */
+delegate('pro-body', '#pro-agree', el => {
+  proAgreed = el.checked;
+  renderProScreen(); // 결제 버튼의 활성 여부가 이 값에 걸려 있다
 });
 delegate('exam-body', '.lock-card', () => goToPro('screen-exam'));
 delegate('summary-notes-body', '.lock-card', () => goToPro('screen-summary-notes'));

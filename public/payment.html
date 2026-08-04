@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<!--
+  결제 결과 화면. 토스페이먼츠 결제창의 successUrl / failUrl 이 여기로 돌아온다.
+
+  ⚠️ 앱 첫 화면(/)이 아니라 이 페이지를 쓰는 이유:
+     로그인(Supabase PKCE)이 돌아올 때 `/?code=...` 를 쓰는데, 토스의 결제 실패도
+     `?code=PAY_PROCESS_CANCELED` 형태로 돌아온다. 같은 주소로 받으면 Supabase가
+     결제 실패 코드를 로그인 코드로 착각해 세션 교환을 시도한다.
+
+  ⚠️ 승인 API(/api/payments/confirm)는 아직 없다. 토스 계약 후 만들면 이 페이지는
+     고치지 않아도 된다 — 아래 confirmPayment() 가 이미 그 주소로 POST 한다.
+-->
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>결제 결과 — 한식조리기능사 CBT</title>
+<link rel="stylesheet" href="/legal.css">
+<style>
+  body { background: var(--bg-outer); }
+  .wrap {
+    max-width: 420px; margin: 0 auto; min-height: 100vh; background: var(--bg);
+    display: flex; flex-direction: column; justify-content: center; padding: 24px 22px;
+  }
+  .card {
+    background: var(--card); border-radius: 20px; padding: 30px 24px;
+    text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,.06);
+  }
+  .icon {
+    width: 62px; height: 62px; border-radius: 50%; margin: 0 auto 18px;
+    display: flex; align-items: center; justify-content: center; font-size: 30px;
+  }
+  .icon.ok      { background: #E6F8E6; color: #1B7E2A; }
+  .icon.fail    { background: #FFEBE8; color: #C92F33; }
+  .icon.neutral { background: var(--neutral-bg); color: var(--text-sub); }
+  .icon.wait    { background: var(--accent-lt); color: var(--accent-text); }
+
+  h1 { font-size: 20px; font-weight: 800; letter-spacing: -.3px; }
+  .msg { font-size: 14px; color: var(--text-sub); line-height: 1.7; margin-top: 10px; }
+
+  .detail {
+    background: var(--neutral-bg); border-radius: 12px; padding: 13px 15px;
+    margin-top: 18px; font-size: 12.5px; color: var(--text-sub); text-align: left;
+  }
+  .detail div { display: flex; gap: 10px; padding: 2px 0; }
+  .detail .k { font-weight: 700; flex-shrink: 0; min-width: 68px; }
+  .detail .v { word-break: break-all; }
+
+  .actions { margin-top: 22px; display: flex; flex-direction: column; gap: 9px; }
+  .btn {
+    display: block; padding: 15px; border-radius: 14px; border: none;
+    font-size: 15px; font-weight: 800; font-family: inherit;
+    text-decoration: none; cursor: pointer; text-align: center;
+  }
+  .btn.primary { background: var(--accent); color: #fff; }
+  .btn.ghost   { background: var(--neutral-bg); color: var(--text); }
+
+  .spinner {
+    width: 26px; height: 26px; border: 3px solid var(--accent-lt);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap"><div class="card" id="card"></div></div>
+
+<script>
+/* 토스가 붙여 보내는 값들. 성공이면 paymentKey·orderId·amount,
+   실패면 code·message·orderId 가 온다. */
+const q = new URLSearchParams(location.search);
+const card = document.getElementById('card');
+
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+}
+
+function render({ icon, iconClass, title, msg, detail, actions }) {
+  card.innerHTML = `
+    <div class="icon ${iconClass}">${icon}</div>
+    <h1>${esc(title)}</h1>
+    <div class="msg">${msg}</div>
+    ${detail ? `<div class="detail">${detail}</div>` : ''}
+    <div class="actions">${actions}</div>`;
+}
+
+const backToApp = `<a class="btn primary" href="/">앱으로 돌아가기</a>`;
+const contact = `<a class="btn ghost" href="mailto:bonekatana@gmail.com?subject=%EA%B2%B0%EC%A0%9C%20%EB%AC%B8%EC%9D%98">문의하기</a>`;
+
+function orderDetail() {
+  const rows = [
+    ['주문번호', q.get('orderId')],
+    ['결제금액', q.get('amount') ? Number(q.get('amount')).toLocaleString() + '원' : null],
+  ].filter(([, v]) => v);
+  if (!rows.length) return '';
+  return rows.map(([k, v]) => `<div><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`).join('');
+}
+
+/* 토스가 돌려주는 실패 코드 중 사용자에게 다르게 말해야 하는 것들.
+   나머지는 토스가 준 message 를 그대로 보여준다 — 우리가 지어내는 것보다 정확하다. */
+const FAIL_MESSAGES = {
+  PAY_PROCESS_CANCELED: {
+    title: '결제를 취소했습니다',
+    msg: '결제가 진행되지 않았고 요금도 청구되지 않았습니다.<br>언제든 다시 시도하실 수 있습니다.',
+    icon: '↩', iconClass: 'neutral',
+  },
+  PAY_PROCESS_ABORTED: {
+    title: '결제가 중단되었습니다',
+    msg: '결제 도중 문제가 발생했습니다. 요금은 청구되지 않았습니다.',
+    icon: '!', iconClass: 'fail',
+  },
+  REJECT_CARD_COMPANY: {
+    title: '카드사에서 거절했습니다',
+    msg: '카드 한도나 상태를 확인하신 뒤 다시 시도해 주세요.<br>다른 결제수단을 이용하실 수도 있습니다.',
+    icon: '!', iconClass: 'fail',
+  },
+};
+
+function showFail(code, message) {
+  const known = FAIL_MESSAGES[code];
+  render({
+    icon: known ? known.icon : '!',
+    iconClass: known ? known.iconClass : 'fail',
+    title: known ? known.title : '결제에 실패했습니다',
+    msg: known ? known.msg
+      : `${esc(message || '알 수 없는 오류가 발생했습니다.')}<br>요금이 청구되었다면 문의해 주세요.`,
+    detail: orderDetail() + (code ? `<div><span class="k">오류코드</span><span class="v">${esc(code)}</span></div>` : ''),
+    actions: backToApp + contact,
+  });
+}
+
+/* 승인은 반드시 서버가 한다. 클라이언트가 토스 승인 API를 직접 부르면
+   secret key 가 노출되고, 금액 대조도 할 수 없다. */
+async function confirmPayment(paymentKey, orderId, amount) {
+  render({
+    icon: '<div class="spinner"></div>', iconClass: 'wait',
+    title: '결제를 확인하고 있습니다',
+    msg: '잠시만 기다려 주세요.<br>이 화면을 닫지 말아 주세요.',
+    detail: orderDetail(),
+    actions: '',
+  });
+
+  try {
+    const res = await fetch('/api/payments/confirm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paymentKey, orderId, amount: Number(amount) }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `승인에 실패했습니다 (${res.status})`);
+
+    render({
+      icon: '✓', iconClass: 'ok',
+      title: '결제가 완료되었습니다',
+      msg: '프로 버전이 바로 열렸습니다.<br>보기별 상세해설과 요약노트 본문을 이용하실 수 있습니다.',
+      detail: orderDetail(),
+      actions: backToApp,
+    });
+  } catch (e) {
+    // 결제창은 통과했는데 승인에서 막힌 경우다. 돈이 빠져나갔을 수 있으므로
+    // "실패했으니 다시 결제하세요"라고 말하면 안 된다.
+    render({
+      icon: '!', iconClass: 'fail',
+      title: '결제 확인이 지연되고 있습니다',
+      msg: `${esc(e.message)}<br><br><strong>다시 결제하지 마시고</strong> 아래로 문의해 주세요. 주문번호를 알려주시면 확인 후 처리해 드립니다.`,
+      detail: orderDetail(),
+      actions: contact + `<a class="btn ghost" href="/">앱으로 돌아가기</a>`,
+    });
+  }
+}
+
+/* ── 진입 분기 ── */
+const failCode = q.get('code');
+const paymentKey = q.get('paymentKey');
+
+if (failCode) {
+  showFail(failCode, q.get('message'));
+} else if (paymentKey && q.get('orderId') && q.get('amount')) {
+  confirmPayment(paymentKey, q.get('orderId'), q.get('amount'));
+} else {
+  // 주소창에 직접 들어왔거나 파라미터가 잘린 경우
+  render({
+    icon: '?', iconClass: 'neutral',
+    title: '결제 정보가 없습니다',
+    msg: '결제 과정을 거치지 않고 열린 화면입니다.<br>결제하신 기억이 있는데 이 화면이 보인다면 문의해 주세요.',
+    actions: backToApp + contact,
+  });
+}
+</script>
+</body>
+</html>
