@@ -969,7 +969,30 @@ const isSignedIn = () => currentUser !== null;
    권한은 user_entitlements 테이블이 원본이며 클라이언트는 읽기만 할 수 있다. */
 let IS_PRO = false;
 const isPro = () => IS_PRO;
-const PRO_PRICE = 5500, PRO_LIST_PRICE = 8900;
+
+/* ── 가격 ──
+   금액의 원본은 서버(api/_pricing.js)다. 결제를 붙이면 주문 생성·승인이 같은 값을 읽고
+   클라이언트가 보낸 금액은 쓰지 않으므로, 여기 값은 오직 "보여주기" 용도다.
+   받아오기 전에는 금액을 비워 둔다 — 틀린 금액을 잠깐이라도 띄우지 않는다. */
+let PRICING = null;
+let pricingPromise = null;
+function loadPricing() {
+  if (PRICING) return Promise.resolve(PRICING);
+  if (!pricingPromise) {
+    pricingPromise = fetch('/api/pricing')
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(d => {
+        if (!Number.isFinite(d.price) || !Number.isFinite(d.listPrice)) {
+          throw new Error('가격 형식이 올바르지 않습니다');
+        }
+        PRICING = { price: d.price, listPrice: d.listPrice };
+        return PRICING;
+      })
+      .finally(() => { pricingPromise = null; });
+  }
+  return pricingPromise;
+}
+const priceText = n => `${n.toLocaleString()}원`;
 
 async function loadEntitlement() {
   const { data, error } = await SB.from('user_entitlements')
@@ -977,6 +1000,26 @@ async function loadEntitlement() {
   if (error) throw new Error(error.message);
   IS_PRO = !!(data && data.is_pro
     && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now()));
+}
+
+/* 권한은 앱 밖에서 바뀐다 — 지금은 관리자가 SQL로 부여하고, 나중에는 결제 승인이 부여한다.
+   로그인 시점에 한 번만 조회하면 그 값이 세션 내내 굳어서, 프로가 되어도 로그아웃했다가
+   다시 로그인해야 반영됐다. 프로 여부가 드러나는 화면에 들어올 때마다 다시 확인한다.
+   조회에 실패하면 지금 값을 그대로 둔다 (네트워크가 잠깐 끊겼다고 프로를 뺏지 않는다). */
+async function refreshEntitlement() {
+  if (!isSignedIn()) return;
+  const before = IS_PRO;
+  try {
+    await loadEntitlement();
+  } catch (e) {
+    console.warn('권한 조회 실패:', e.message);
+    return;
+  }
+  if (IS_PRO === before) return;
+
+  resetProContent(); // 무료일 때 받아둔 프로 전용 콘텐츠 캐시를 버린다
+  if (document.getElementById('screen-settings').classList.contains('active')) renderSettings();
+  if (document.getElementById('screen-pro').classList.contains('active')) renderProScreen();
 }
 
 /* 권한이 바뀌면 요약노트를 다시 받아야 한다.
@@ -1164,7 +1207,7 @@ function accountLabel(user) {
 /* 로그인 직후 마이그레이션 결과 안내. 설정 화면을 다시 그려도 남아 있어야 한다 */
 let syncMessage = '';
 
-function goToSettings() { renderSettings(); goTo('screen-settings'); }
+function goToSettings() { renderSettings(); goTo('screen-settings'); refreshEntitlement(); }
 
 function renderSettings(msg) {
   if (msg !== undefined) syncMessage = msg;
@@ -1193,7 +1236,7 @@ function renderSettings(msg) {
   const crown = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" style="color:var(--accent);flex-shrink:0"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5z"/></svg>`;
   const proRow = isPro()
     ? `<div class="settings-row pro static">${crown} 프로 버전<span class="s-right">이용중 ✓</span></div>`
-    : `<button class="settings-row pro" data-act="pro">${crown} 프로 버전 구매<span class="s-right">${PRO_PRICE.toLocaleString()}원</span></button>`;
+    : `<button class="settings-row pro" data-act="pro">${crown} 프로 버전 구매<span class="s-right">${PRICING ? priceText(PRICING.price) : ''}</span></button>`;
 
   el.innerHTML = `
     <div class="setting-section">
@@ -1254,17 +1297,32 @@ function goToPro(from) {
   proReturnScreen = from || 'screen-settings';
   renderProScreen();
   goTo('screen-pro');
+  refreshEntitlement(); // 결제·수동 부여가 방금 끝났을 수 있다. 바뀌면 화면을 다시 그린다
+
+  // 가격은 서버가 원본이다. 아직 못 받았으면 받아와서 다시 그린다
+  if (!PRICING) {
+    loadPricing()
+      .then(() => {
+        if (document.getElementById('screen-pro').classList.contains('active')) renderProScreen();
+      })
+      .catch(e => console.warn('가격 조회 실패:', e.message));
+  }
 }
 
 function renderProScreen() {
   const el = document.getElementById('pro-body');
   if (!el) return;
-  const off = Math.round((1 - PRO_PRICE / PRO_LIST_PRICE) * 100);
+
+  // 가격이 아직 안 왔으면 금액 없이 그린다. 도착하면 goToPro가 다시 그린다.
+  const off = PRICING ? Math.round((1 - PRICING.price / PRICING.listPrice) * 100) : 0;
+  const priceHtml = PRICING
+    ? `<s>${priceText(PRICING.listPrice)}</s>${priceText(PRICING.price)}<small>(${off}%↓)</small>`
+    : '<small>가격을 불러오는 중…</small>';
 
   const cta = isPro()
     ? `<button class="btn-upgrade" disabled>✓ 이미 이용 중입니다</button>`
     : (isSignedIn()
-      ? `<button class="btn-upgrade" data-act="checkout">업그레이드 하기 (${PRO_PRICE.toLocaleString()}원)</button>`
+      ? `<button class="btn-upgrade" data-act="checkout">업그레이드 하기${PRICING ? ` (${priceText(PRICING.price)})` : ''}</button>`
       : `<button class="btn-upgrade" data-act="signin-pro">로그인하고 업그레이드</button>`);
 
   el.innerHTML = `
@@ -1272,10 +1330,7 @@ function renderProScreen() {
       <div class="pro-hero">
         <div class="p-kicker">추가 결제 없이 평생 이용</div>
         <div class="p-head">프로 버전으로 업그레이드</div>
-        <div class="p-price">
-          <s>${PRO_LIST_PRICE.toLocaleString()}원</s>${PRO_PRICE.toLocaleString()}원
-          <small>(${off}%↓)</small>
-        </div>
+        <div class="p-price">${priceHtml}</div>
       </div>
     </div>
     <div class="setting-section">
@@ -1841,7 +1896,10 @@ function goToSummaryNotes() {
   if (!summaryNotesLoaded) summaryNotesError = '';
   goTo('screen-summary-notes');
   renderSummaryNotesScreen();
-  if (!summaryNotesLoaded) {
+  // 권한 확인이 먼저다. 목록을 먼저 띄우면, 그 사이 프로로 바뀌었을 때 방금 받은
+  // 제목뿐인 목록이 "불러오기 완료"로 굳어 본문이 끝내 안 나온다.
+  refreshEntitlement().then(() => {
+    if (summaryNotesLoaded) return;
     loadSummaryNotes()
       .catch(e => { summaryNotesError = e.message || '요약노트를 불러오지 못했습니다'; })
       .then(() => {
@@ -1850,7 +1908,7 @@ function goToSummaryNotes() {
           renderSummaryNotesScreen();
         }
       });
-  }
+  });
 }
 
 /* 목록은 위 칩과 같은 과목 순으로 늘어놓는다. 서버는 id 순으로 주기 때문에
@@ -2512,6 +2570,11 @@ syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
 syncHomeProBadge();        // 권한 조회 전에는 무료로 본다
 maybeShowOnboarding();     // 첫 방문이면 온보딩으로 덮는다
 initAuth();
+
+/* 설정 화면의 금액 표시를 위해 미리 받아 둔다. 실패해도 화면은 금액 없이 그려진다 */
+loadPricing()
+  .then(() => renderSettings())
+  .catch(e => console.warn('가격 조회 실패:', e.message));
 
 /* 홈의 총 문항 수는 실제 DB 값을 쓴다 (예전엔 "300+"로 고정돼 있었다) */
 (async () => {
