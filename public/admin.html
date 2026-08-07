@@ -93,6 +93,14 @@
 
     <div id="result" class="section hidden"></div>
 
+    <!-- 결제 내역 · 대사 -->
+    <div id="payments-section" class="section hidden">
+      <hr class="divide">
+      <h4>결제 내역 · 대사</h4>
+      <button class="secondary" id="payments-btn" onclick="loadPayments()">결제 내역 불러오기</button>
+      <div id="payments-result" class="hidden" style="margin-top:12px"></div>
+    </div>
+
     <!-- 환불 (결제 취소) -->
     <div id="refund-section" class="section hidden">
       <hr class="divide">
@@ -129,6 +137,7 @@ function render() {
   const hasToken = !!getToken();
   $('auth-section').classList.toggle('hidden', hasToken);
   $('sync-section').classList.toggle('hidden', !hasToken);
+  $('payments-section').classList.toggle('hidden', !hasToken);
   $('refund-section').classList.toggle('hidden', !hasToken);
   if (hasToken) showLastSync();
 }
@@ -203,23 +212,17 @@ async function runSync() {
   }
 }
 
-/* ── 결제 취소 ──
-   두 단계로 나눈 이유: 주문번호는 손으로 옮겨 적는 값이고, 한 글자 틀리면
-   엉뚱한 사람의 결제를 취소한다. 취소는 되돌릴 수 없다.
-   그래서 조회로 금액·상태를 눈으로 확인한 뒤에만 취소 버튼이 나타난다. */
+/* ── 결제 내역 · 대사 ──
+   대사가 찾는 것은 "돈과 권한이 어긋난 건"이다. 특히 승인됐는데 프로가 안 붙은 건은
+   사용자가 돈을 내고 못 받고 있는 상태라 눈에 띄어야 한다. */
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
   ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
 
-const STATUS_LABEL = {
-  ready: '결제창까지 가지 않은 주문', approved: '승인 완료',
-  canceled: '취소됨', failed: '승인 거절',
-};
-
-async function callCancelApi(payload) {
-  const res = await fetch('/api/payments/cancel', {
+async function adminPost(url, payload) {
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-sync-token': getToken() },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(payload || {}),
   });
   let data;
   try { data = await res.json(); }
@@ -230,6 +233,115 @@ async function callCancelApi(payload) {
   }
   return data;
 }
+
+const STATUS_TAG = {
+  approved: ['✓', '#14532D'], canceled: ['↩', '#6B7280'],
+  ready: ['…', '#B45309'], failed: ['✕', '#DC2626'],
+};
+
+function paymentRow(r) {
+  const [mark, color] = STATUS_TAG[r.status] || ['·', '#6B7280'];
+  const when = r.approved_at || r.created_at;
+  const flags = [];
+  if (r.mismatch) flags.push('<b style="color:#DC2626">권한 없음</b>');
+  if (r.stale) flags.push('<b style="color:#B45309">방치됨</b>');
+  return `
+    <div style="padding:9px 0;border-top:1px solid var(--border)">
+      <div class="row">
+        <span style="color:${color};font-weight:700">${mark} ${esc(r.status)}</span>
+        <b>${r.amount.toLocaleString()}원</b>
+      </div>
+      <div class="muted" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;word-break:break-all">${esc(r.order_id)}</div>
+      <div class="muted">${when ? new Date(when).toLocaleString('ko-KR') : '-'}${r.method ? ' · ' + esc(r.method) : ''}${flags.length ? ' · ' + flags.join(' · ') : ''}</div>
+    </div>`;
+}
+
+async function loadPayments() {
+  const btn = $('payments-btn');
+  btn.disabled = true;
+  btn.textContent = '불러오는 중…';
+  try {
+    const d = await adminPost('/api/payments/list');
+    const s = d.summary;
+    const counts = Object.entries(s.byStatus)
+      .map(([k, v]) => `${esc(k)} ${v}`).join(' · ') || '없음';
+
+    const alerts = [];
+    if (s.mismatches) {
+      alerts.push(`<div class="card err" style="margin-bottom:10px">
+        ⚠️ 승인됐는데 프로가 안 붙은 건이 <b>${s.mismatches}건</b> 있습니다. 사용자가 돈을 내고 못 받고 있는 상태입니다.</div>`);
+    }
+    if (s.stale) {
+      alerts.push(`<div class="card" style="margin-bottom:10px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E">
+        ${s.stale}건이 <b>${d.staleMinutes}분 넘게 미완료</b> 상태입니다. 결제창까지 안 갔거나, 돈은 빠졌는데 승인이 유실된 건일 수 있습니다.
+        <div style="margin-top:10px"><button class="secondary" onclick="reconcile(false)">미완료 주문 점검</button></div></div>`);
+    }
+    if (s.proWithoutPayment.length) {
+      alerts.push(`<div class="card" style="margin-bottom:10px">
+        결제 없이 프로인 계정 <b>${s.proWithoutPayment.length}건</b>
+        <div class="muted">${s.proWithoutPayment.map(u => esc(u.source || '수동')).join(', ')} — 관리자가 직접 부여한 건이면 정상입니다.</div></div>`);
+    }
+
+    $('payments-result').className = '';
+    $('payments-result').innerHTML = `
+      ${alerts.join('')}
+      <div class="card">
+        <div class="row"><span>최근 ${d.limit}건</span><b>${s.total}건</b></div>
+        <div class="row"><span>매출 (취소 제외)</span><b>${s.revenue.toLocaleString()}원</b></div>
+        <div class="muted" style="margin-top:4px">${counts}</div>
+        ${d.rows.map(paymentRow).join('')}
+      </div>`;
+  } catch (e) {
+    $('payments-result').className = '';
+    $('payments-result').innerHTML = `<div class="card err">⚠️ ${esc(e.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '결제 내역 불러오기';
+  }
+}
+
+/* 방치된 ready 주문을 토스에 대조한다. 기본은 점검만, apply=true 면 실제로 고친다. */
+async function reconcile(apply) {
+  if (apply && !confirm('점검 결과대로 반영합니다.\n\n결제된 건은 프로를 부여하고, 결제되지 않은 건은 실패로 정리합니다.\n\n진행할까요?')) return;
+  const box = $('payments-result');
+  try {
+    const d = await adminPost('/api/payments/reconcile', { apply });
+    const lines = d.results.map(r => {
+      const label = { grant: '결제됨 → 프로 부여 필요', fail: '결제 안 됨 → 정리 대상', wait: '진행 중 — 대기' }[r.action] || r.action;
+      const done = apply ? (r.applied ? ' ✓ 반영됨' : (r.error ? ' ✕ ' + esc(r.error) : ' — 변경 없음')) : '';
+      return `<div style="padding:6px 0;border-top:1px solid var(--border)">
+        <div class="muted" style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:10.5px;word-break:break-all">${esc(r.orderId)}</div>
+        <div class="row"><span>${esc(label)}${done}</span><b>${r.amount.toLocaleString()}원</b></div>
+        <div class="muted">토스 상태: ${esc(r.tossStatus || '-')}</div>
+      </div>`;
+    }).join('') || '<div class="muted" style="margin-top:6px">점검할 주문이 없습니다.</div>';
+
+    box.className = '';
+    box.innerHTML = `
+      <div class="card ${d.recovered ? 'err' : ''}">
+        <div style="font-weight:700;margin-bottom:6px">${apply ? '대사 반영 완료' : '점검 결과'} — ${d.checked}건 확인</div>
+        ${d.recovered ? `<div><b>결제됐는데 프로가 없는 건 ${d.recovered}건</b> — 반영하면 프로가 부여됩니다.</div>` : ''}
+        ${d.cleaned ? `<div class="muted">정리 대상 ${d.cleaned}건</div>` : ''}
+        ${lines}
+        ${!apply && d.checked ? `<div style="margin-top:12px"><button onclick="reconcile(true)">점검 결과대로 반영하기</button></div>` : ''}
+        <div style="margin-top:10px"><button class="secondary" onclick="loadPayments()">결제 내역으로 돌아가기</button></div>
+      </div>`;
+  } catch (e) {
+    box.className = '';
+    box.innerHTML = `<div class="card err">⚠️ ${esc(e.message)}</div>`;
+  }
+}
+
+/* ── 결제 취소 ──
+   두 단계로 나눈 이유: 주문번호는 손으로 옮겨 적는 값이고, 한 글자 틀리면
+   엉뚱한 사람의 결제를 취소한다. 취소는 되돌릴 수 없다.
+   그래서 조회로 금액·상태를 눈으로 확인한 뒤에만 취소 버튼이 나타난다. */
+const STATUS_LABEL = {
+  ready: '결제창까지 가지 않은 주문', approved: '승인 완료',
+  canceled: '취소됨', failed: '승인 거절',
+};
+
+const callCancelApi = (payload) => adminPost('/api/payments/cancel', payload);
 
 function showCancelBox(html) {
   $('cancel-result').className = '';
