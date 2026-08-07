@@ -520,9 +520,12 @@
   }
   .btn-upgrade:disabled { background: var(--border); color: var(--text-sub); cursor: default; }
 
-  /* 청약철회 제한 동의.
+  /* 청약철회 제한 + 미성년자 결제 동의.
      환불정책 제3조가 "결제 화면에서 고지하고 동의를 받는다"고 공개적으로 약속했으므로,
-     이 체크 없이는 결제로 넘어갈 수 없어야 한다. */
+     이 체크 없이는 결제로 넘어갈 수 없어야 한다.
+     법정대리인 동의 확인을 같은 체크에 묶은 것은, 미성년자 취소권(환불정책 제4조)이
+     콘텐츠를 열람했더라도 살아 있어서 어차피 취소를 막을 수단이 아니기 때문이다.
+     체크박스의 값은 "동의를 받았다고 본인이 표시했다"는 기록일 뿐이다. */
   .agree-row {
     display: flex; gap: 10px; align-items: flex-start;
     background: var(--card); border: 2px solid var(--border); border-radius: 14px;
@@ -1359,7 +1362,8 @@ function renderProScreen() {
          <input type="checkbox" id="pro-agree" ${proAgreed ? 'checked' : ''}>
          <span>프로 전용 해설·요약노트를 열람하면 청약철회가 제한된다는 점을 확인했으며,
            <a href="/refund.html" target="_blank" rel="noopener">환불정책</a>과
-           <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>에 동의합니다. (필수)</span>
+           <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>에 동의합니다.
+           만 19세 미만인 경우 법정대리인의 동의를 받았습니다. (필수)</span>
        </label>`
     : '';
 
@@ -1407,7 +1411,9 @@ function renderProScreen() {
       <div class="settings-hint">문제풀이, 정답 확인, 오답노트, 즐겨찾기, 풀이결과 통계는 무료로 계속 쓸 수 있습니다.</div>
       <div class="settings-hint">
         추가 결제 없이 계속 이용하는 1회 결제이며, 자동으로 갱신되지 않습니다.
-        결제 후 프로 전용 해설·요약노트를 열람하면 청약철회가 제한될 수 있습니다.
+        결제 후 프로 전용 해설·요약노트를 열람하면 청약철회가 제한될 수 있습니다.<br>
+        <strong>만 19세 미만이신 경우 결제 전에 법정대리인(보호자)의 동의가 필요합니다.</strong>
+        동의 없이 결제하신 경우 본인 또는 보호자가 취소하실 수 있습니다.
         <a href="/terms.html">이용약관</a> · <a href="/refund.html">환불정책</a> · <a href="/privacy.html">개인정보처리방침</a>
       </div>
       ${agreeHtml}
