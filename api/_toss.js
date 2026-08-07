@@ -64,6 +64,30 @@ async function callToss(path, body, idempotencyKey) {
   return data;
 }
 
+async function getToss(path) {
+  const res = await fetch(`${TOSS_API}${path}`, {
+    headers: { Authorization: authHeader() },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new TossError(data.message, data.code, res.status);
+  return data;
+}
+
+/* 결제 한 건의 현재 상태를 토스에 직접 물어본다.
+ *
+ * 웹훅이 이걸 쓴다. 웹훅 요청은 누구나 우리 주소로 보낼 수 있으므로 본문을 믿으면 안 되고,
+ * 본문에서 paymentKey 만 꺼낸 뒤 **우리 secret key 로 토스에 되물어** 진짜 상태를 확인한다.
+ * 위조된 본문으로는 존재하는 결제의 실제 상태를 조회하게 만드는 것 이상을 할 수 없다.
+ */
+export function fetchPayment(paymentKey) {
+  return getToss(`/payments/${encodeURIComponent(paymentKey)}`);
+}
+
+/* paymentKey 없이 orderId 만 온 경우의 조회 경로 */
+export function fetchPaymentByOrderId(orderId) {
+  return getToss(`/payments/orders/${encodeURIComponent(orderId)}`);
+}
+
 /* 결제 승인. 이 호출이 성공한 시점부터 실제로 돈이 빠져나간 것이다.
    amount 는 반드시 서버가 저장해 둔 주문 금액을 넘긴다 — 클라이언트가 보낸 값이 아니다. */
 export function confirmPayment({ paymentKey, orderId, amount }) {
