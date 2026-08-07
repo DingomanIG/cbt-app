@@ -985,9 +985,11 @@ let IS_PRO = false;
 const isPro = () => IS_PRO;
 
 /* ── 가격 ──
-   금액의 원본은 서버(api/_pricing.js)다. 결제를 붙이면 주문 생성·승인이 같은 값을 읽고
-   클라이언트가 보낸 금액은 쓰지 않으므로, 여기 값은 오직 "보여주기" 용도다.
-   받아오기 전에는 금액을 비워 둔다 — 틀린 금액을 잠깐이라도 띄우지 않는다. */
+   금액의 원본은 서버(api/_pricing.js)다. 주문 생성·승인이 같은 값을 읽고 클라이언트가 보낸
+   금액은 쓰지 않으므로, 여기 값은 오직 "보여주기" 용도다.
+   받아오기 전에는 금액을 비워 둔다 — 틀린 금액을 잠깐이라도 띄우지 않는다.
+   결제 개시 여부(checkoutEnabled)도 같이 받는다. 서버에 토스 키가 없으면 false 로 오고,
+   프로 화면은 결제 버튼 대신 "준비 중"을 띄운다. */
 let PRICING = null;
 let pricingPromise = null;
 function loadPricing() {
@@ -999,7 +1001,9 @@ function loadPricing() {
         if (!Number.isFinite(d.price) || !Number.isFinite(d.listPrice)) {
           throw new Error('가격 형식이 올바르지 않습니다');
         }
-        PRICING = { price: d.price, listPrice: d.listPrice };
+        // 결제 가능 여부도 서버가 정한다(토스 키가 들어와 있는가).
+        // 값이 없거나 이상하면 잠그는 쪽으로 본다 — 열 수 없는 결제창을 띄우는 것보다 낫다.
+        PRICING = { price: d.price, listPrice: d.listPrice, checkoutEnabled: d.checkoutEnabled === true };
         return PRICING;
       })
       .finally(() => { pricingPromise = null; });
@@ -1344,9 +1348,12 @@ function renderProScreen() {
     ? `<s>${priceText(PRICING.listPrice)}</s>${priceText(PRICING.price)}<small>(${off}%↓)</small>`
     : '<small>가격을 불러오는 중…</small>';
 
+  // 결제 개시 여부는 서버가 정한다(토스 키 유무). 가격을 아직 못 받았으면 "모르는" 상태다.
+  const checkoutReady = !!(PRICING && PRICING.checkoutEnabled);
+
   // 결제로 넘어갈 수 있는 사람에게만 동의를 받는다.
-  // 이미 프로이거나 비로그인이면 결제 자체가 시작되지 않으므로 물어볼 것이 없다.
-  const needsAgreement = !isPro() && isSignedIn();
+  // 이미 프로거나, 비로그인이거나, 결제가 아직 안 열렸으면 물어볼 것이 없다.
+  const needsAgreement = !isPro() && isSignedIn() && checkoutReady;
   const agreeHtml = needsAgreement
     ? `<label class="agree-row ${proAgreed ? 'checked' : ''}">
          <input type="checkbox" id="pro-agree" ${proAgreed ? 'checked' : ''}>
@@ -1356,11 +1363,18 @@ function renderProScreen() {
        </label>`
     : '';
 
+  /* 결제가 아직 안 열린 동안에도 이 화면과 약관은 배포된다.
+     그때 "로그인하고 업그레이드"를 띄우면 로그인해도 결제할 수 없어 헛걸음이 되므로,
+     결제 개시 여부를 로그인 여부보다 먼저 본다. */
   const cta = isPro()
     ? `<button class="btn-upgrade" disabled>✓ 이미 이용 중입니다</button>`
-    : (isSignedIn()
-      ? `<button class="btn-upgrade" data-act="checkout" ${proAgreed ? '' : 'disabled'}>업그레이드 하기${PRICING ? ` (${priceText(PRICING.price)})` : ''}</button>`
-      : `<button class="btn-upgrade" data-act="signin-pro">로그인하고 업그레이드</button>`);
+    : !PRICING
+      ? `<button class="btn-upgrade" disabled>가격을 불러오는 중…</button>`
+      : !PRICING.checkoutEnabled
+        ? `<button class="btn-upgrade" disabled>결제 기능 준비 중입니다</button>`
+        : (isSignedIn()
+          ? `<button class="btn-upgrade" data-act="checkout" ${proAgreed ? '' : 'disabled'}>업그레이드 하기 (${priceText(PRICING.price)})</button>`
+          : `<button class="btn-upgrade" data-act="signin-pro">로그인하고 업그레이드</button>`);
 
   el.innerHTML = `
     <div class="setting-section">
@@ -1404,16 +1418,76 @@ function renderProScreen() {
     </div>`;
 }
 
-function startCheckout() {
+/* 토스 결제 SDK는 결제하려는 사람에게만 필요하다.
+   첫 화면부터 받아오면 문제만 풀다 나가는 대부분의 사용자에게 헛짐이라, 여기서 처음 부를 때 받는다. */
+let tossSdkPromise = null;
+function loadTossSdk() {
+  if (window.TossPayments) return Promise.resolve(window.TossPayments);
+  if (!tossSdkPromise) {
+    tossSdkPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://js.tosspayments.com/v2/standard';
+      s.onload = () => window.TossPayments
+        ? resolve(window.TossPayments)
+        : reject(new Error('결제 모듈을 불러오지 못했습니다'));
+      s.onerror = () => reject(new Error('결제 모듈을 불러오지 못했습니다'));
+      document.head.appendChild(s);
+    }).finally(() => { tossSdkPromise = null; });
+  }
+  return tossSdkPromise;
+}
+
+let checkoutInFlight = false;
+async function startCheckout() {
   // 버튼이 비활성이라 여기까지 오지 않아야 하지만, 동의 없이 결제가 시작되는 일은
   // 환불정책 제3조를 어기는 것이라 한 겹 더 막는다.
   if (!proAgreed) return;
+  if (checkoutInFlight) return; // 연타로 주문이 두 개 생기는 것을 막는다
+  if (!isSignedIn() || isPro()) return;
+  // 결제가 아직 안 열린 상태에서는 버튼 자체가 없지만, 주문 행이 생기는 일은 한 겹 더 막는다
+  if (!PRICING || !PRICING.checkoutEnabled) return;
 
-  // 결제(PG) 연동 전이다. 지금은 관리자가 user_entitlements에 직접 프로를 부여한다.
-  // 연동 시 여기서 주문을 만들고 토스 결제창을 띄운다.
-  // 결제창의 successUrl/failUrl 은 /payment.html 로 보낸다 — 앱 첫 화면(/)은
-  // 로그인 리다이렉트의 ?code= 를 이미 쓰고 있어서, 토스의 실패 코드(?code=)와 겹친다.
-  alert('결제 기능은 준비 중입니다.\n조금만 기다려 주세요!');
+  const btn = document.querySelector('#pro-body [data-act="checkout"]');
+  const label = btn ? btn.textContent : '';
+  checkoutInFlight = true;
+  if (btn) { btn.disabled = true; btn.textContent = '결제창을 여는 중…'; }
+
+  const restore = () => {
+    checkoutInFlight = false;
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  };
+
+  try {
+    // 1) 주문 생성. 금액은 서버가 정하고 서버에 저장한다 — 여기서 금액을 보내지 않는다.
+    const res = await fetch('/api/payments/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    });
+    const order = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(order.error || `주문을 만들지 못했습니다 (${res.status})`);
+
+    // 2) 결제창. successUrl/failUrl 은 반드시 /payment.html 이다 —
+    //    앱 첫 화면(/)은 로그인 리다이렉트의 ?code= 를 이미 쓰고 있어서
+    //    토스의 실패 코드(?code=PAY_PROCESS_CANCELED)와 겹친다.
+    const TossPayments = await loadTossSdk();
+    const payment = TossPayments(order.clientKey).payment({ customerKey: order.customerKey });
+
+    await payment.requestPayment({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: order.amount },
+      orderId: order.orderId,
+      orderName: order.orderName,
+      successUrl: `${location.origin}/payment.html`,
+      failUrl: `${location.origin}/payment.html`,
+      card: { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false },
+    });
+    // 여기까지 오면 화면이 이미 결제창/리다이렉트로 넘어간 뒤다. 승인은 /payment.html 이 맡는다.
+  } catch (e) {
+    // 사용자가 결제창을 닫은 경우까지 오류로 떠들지 않는다
+    if (e && (e.code === 'USER_CANCEL' || e.code === 'PAY_PROCESS_CANCELED')) { restore(); return; }
+    alert(e && e.message ? e.message : '결제를 시작하지 못했습니다.');
+    restore();
+  }
 }
 
 const PROVIDER_LABELS = { google: '구글', kakao: '카카오' };
