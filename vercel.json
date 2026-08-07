@@ -14,7 +14,7 @@
       "headers": [
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://usveeckdaaeetyvbxzmh.supabase.co; frame-ancestors 'none'; base-uri 'none'; form-action 'none'; object-src 'none'"
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://js.tosspayments.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: https://*.tosspayments.com; connect-src 'self' https://usveeckdaaeetyvbxzmh.supabase.co https://api.tosspayments.com https://event.tosspayments.com https://js.tosspayments.com; frame-src https://*.tosspayments.com; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; object-src 'none'"
         },
         { "key": "X-Content-Type-Options", "value": "nosniff" },
         { "key": "X-Frame-Options", "value": "DENY" },

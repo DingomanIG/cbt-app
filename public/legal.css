@@ -1,0 +1,123 @@
+/* 약관·환불정책·개인정보처리방침 공용 스타일.
+   앱(index.html)과 달리 긴 글을 읽는 문서 페이지라 폰 프레임을 쓰지 않고
+   넓은 화면에서는 본문 폭만 제한한다. 팔레트는 앱과 같은 값을 쓴다. */
+
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --primary: #00421F;
+  --accent: #DA950B;
+  --accent-text: #B37000;
+  --accent-lt: #FFEBD1;
+  --bg: #FAF8F5;
+  --bg-outer: #EAE7E3;
+  --card: #FFFFFF;
+  --text: #14110D;
+  --text-sub: #5B5752;
+  --border: #E0DDDA;
+  --neutral-bg: #F4F1ED;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  background: var(--bg-outer);
+  color: var(--text);
+  line-height: 1.75;
+  -webkit-text-size-adjust: 100%;
+}
+
+.doc {
+  max-width: 720px;
+  margin: 0 auto;
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* ── 머리말 ── */
+.doc-head {
+  background: var(--primary);
+  color: #fff;
+  padding: 26px 22px 22px;
+}
+.doc-head .back {
+  display: inline-block;
+  font-size: 13px;
+  color: #fff;
+  opacity: .8;
+  text-decoration: none;
+  margin-bottom: 12px;
+}
+.doc-head .back:hover { opacity: 1; }
+.doc-head h1 { font-size: 22px; font-weight: 800; letter-spacing: -.3px; }
+.doc-head .meta { margin-top: 8px; font-size: 12.5px; opacity: .75; }
+
+/* ── 본문 ── */
+.doc-body { padding: 24px 22px 64px; }
+
+.doc-body h2 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 30px 0 10px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+.doc-body h2:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.doc-body h3 { font-size: 14.5px; font-weight: 700; margin: 18px 0 6px; }
+
+.doc-body p { font-size: 14.5px; margin: 8px 0; }
+.doc-body ul, .doc-body ol { margin: 8px 0 8px 20px; font-size: 14.5px; }
+.doc-body li { margin: 5px 0; }
+.doc-body strong { font-weight: 700; }
+.doc-body a { color: var(--accent-text); }
+
+/* 꼭 읽어야 하는 문단 — 환불 제한, 면책처럼 나중에 분쟁이 되는 곳 */
+.note {
+  background: var(--accent-lt);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0;
+  padding: 12px 14px;
+  margin: 14px 0;
+  font-size: 14px;
+}
+.note strong { color: var(--accent-text); }
+
+/* ── 표 (위탁·국외이전) ── */
+.table-wrap { overflow-x: auto; margin: 12px 0; }
+table {
+  width: 100%;
+  min-width: 460px;
+  border-collapse: collapse;
+  font-size: 13.5px;
+  background: var(--card);
+  border-radius: 10px;
+  overflow: hidden;
+}
+th, td {
+  border: 1px solid var(--border);
+  padding: 9px 11px;
+  text-align: left;
+  vertical-align: top;
+}
+th { background: var(--neutral-bg); font-weight: 700; }
+
+/* ── 아직 채우지 않은 사업자 정보 ──
+   배포 전에 반드시 실제 값으로 바꿔야 한다. 눈에 띄게 남겨 두어
+   빈 칸인 채로 공개되면 바로 보이게 한다. */
+.todo {
+  background: #FFE8E6;
+  color: #73000D;
+  font-weight: 700;
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+.doc-foot {
+  margin-top: 34px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--text-sub);
+}
+.doc-foot a { color: var(--accent-text); margin-right: 14px; }

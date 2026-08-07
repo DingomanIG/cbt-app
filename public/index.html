@@ -5,36 +5,48 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>한식조리기능사 CBT</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
+  /* 팔레트는 디자인 핸드오프의 oklch 값을 sRGB로 옮긴 것이다.
+     oklch를 그대로 쓰면 구형 인앱 웹뷰(카카오톡 등)에서 색이 통째로 무효가 되고,
+     `${color}18` 같은 알파 접미사 트릭도 hex에서만 성립한다. */
   :root {
-    --primary: #1A5C38;
-    --primary-lt: #2E7D52;
-    --accent: #F5A623;
-    --accent-lt: #FFF3DC;
-    --bg: #F5F6F8;
+    --primary: #00421F;       /* oklch(33% .09 155) 딥그린 */
+    --accent: #DA950B;        /* oklch(72% .15 75)  앰버 */
+    --accent-text: #B37000;   /* oklch(60% .15 75) */
+    --accent-deep: #7E4700;   /* oklch(45% .13 75) */
+    --accent-lt: #FFEBD1;
+    --bg: #FAF8F5;
+    --bg-outer: #EAE7E3;
     --card: #FFFFFF;
-    --text: #1A1A1A;
-    --text-sub: #6B7280;
-    --border: #E5E7EB;
-    --correct: #16A34A;
-    --wrong: #DC2626;
-    --correct-bg: #F0FDF4;
-    --wrong-bg: #FEF2F2;
-    --opt-sel: #E6F4EE;
-    --neutral-bg: #EEF2F6;
-    --neutral-text: #4B5768;
-    --summary-bg: #FFF0E5;
-    --summary-border: #F08A3C;
-    --summary-title: #B85C1A;
-    --summary-text: #6B3A12;
+    --text: #14110D;
+    --text-sub: #5B5752;
+    --border: #E0DDDA;
+    --chip-bg: #EDEBE7;
+    --track: #E7E4E0;
+    --arrow: #A29E98;
+    --tab-idle: #78746E;
+    --correct: #1B7E2A;
+    --wrong: #C92F33;
+    --correct-bg: #E6F8E6;
+    --wrong-bg: #FFEBE8;
+    --correct-text: #003908;
+    --wrong-text: #73000D;
+    --opt-sel: #D9EEDF;
+    --opt-border: #DAD7D3;
+    --neutral-bg: #F4F1ED;
+    --neutral-text: #5B5752;
+    --summary-bg: #FFEFDA;
+    --summary-border: #DA950B;
+    --summary-title: #B37000;
+    --summary-text: #7E4700;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
     font-family: 'Noto Sans KR', sans-serif;
-    background: var(--bg);
+    background: var(--bg-outer);
     color: var(--text);
     min-height: 100vh;
     display: flex;
@@ -54,71 +66,79 @@
   .screen { display: none; flex-direction: column; flex: 1; }
   .screen.active { display: flex; }
 
+  /* ── 온보딩 ── */
+  .onboarding {
+    flex: 1; position: relative; background: #000;
+    display: flex; flex-direction: column; cursor: pointer;
+  }
+  .onboarding .ob-photo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%; object-fit: cover; display: block;
+  }
+  .onboarding .ob-shade {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0) 35%, rgba(10,20,15,.55) 65%, #06180E 92%);
+  }
+  .onboarding .ob-copy { position: relative; margin-top: auto; padding: 0 28px 44px; color: #fff; }
+  .onboarding .ob-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,255,255,.16); border-radius: 20px;
+    padding: 5px 13px; font-size: 12px; font-weight: 700; margin-bottom: 14px;
+  }
+  .onboarding h1 { font-size: 28px; font-weight: 800; line-height: 1.35; margin-bottom: 10px; }
+  .onboarding p  { font-size: 14px; opacity: .85; line-height: 1.6; }
+
   /* ── 홈 ── */
   .home-header {
     background: var(--primary);
-    padding: 52px 24px 28px;
+    padding: 52px 24px 30px;
     color: #fff;
   }
-  .account-bar {
-    display: flex; align-items: center; justify-content: flex-end;
-    gap: 8px; margin-bottom: 10px; min-height: 26px; flex-wrap: wrap;
-  }
-  .account-bar .acct-who { font-size: 11px; opacity: .8; max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .account-bar .acct-msg { font-size: 11px; opacity: .8; margin-right: auto; }
-  .account-bar .acct-btn {
-    background: rgba(255,255,255,.16); color: #fff;
-    border: none; border-radius: 20px; padding: 5px 12px;
-    font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer;
-  }
-  .account-bar .acct-btn:active { transform: scale(.97); }
-  .account-bar .acct-btn.kakao { background: #FEE500; color: #191600; }
-
   .home-header .badge {
     display: inline-flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,.15);
-    border-radius: 20px; padding: 4px 12px;
-    font-size: 11px; font-weight: 600;
-    margin-bottom: 14px;
+    border-radius: 20px; padding: 5px 13px;
+    font-size: 12px; font-weight: 700; letter-spacing: .3px;
+    margin-bottom: 16px;
   }
-  .home-header h1 { font-size: 22px; font-weight: 700; line-height: 1.35; }
-  .home-header p  { font-size: 13px; opacity: .75; margin-top: 6px; }
+  .home-header h1 { font-size: 24px; font-weight: 800; line-height: 1.4; }
+  .home-header p  { font-size: 14px; opacity: .8; margin-top: 8px; line-height: 1.5; }
 
   .home-stats {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
     gap: 1px; background: var(--border);
-    margin: 0 16px; border-radius: 14px; overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
-    transform: translateY(-20px);
+    margin: 0 16px; border-radius: 16px; overflow: hidden;
+    box-shadow: 0 4px 16px rgba(0,0,0,.1);
+    transform: translateY(-22px);
   }
-  .stat-box { background: var(--card); padding: 14px 10px; text-align: center; }
-  .stat-box .val { font-size: 20px; font-weight: 700; color: var(--primary); }
-  .stat-box .lbl { font-size: 10px; color: var(--text-sub); margin-top: 2px; }
+  .stat-box { background: var(--card); padding: 16px 8px; text-align: center; }
+  .stat-box .val { font-size: 21px; font-weight: 800; color: var(--primary); }
+  .stat-box .lbl { font-size: 11px; font-weight: 600; color: var(--text-sub); margin-top: 3px; }
 
-  .home-menu { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .home-menu { padding: 0 16px 16px; display: flex; flex-direction: column; gap: 12px; margin-top: -14px; }
   .menu-card {
-    background: var(--card); border-radius: 14px;
-    padding: 18px 20px; display: flex; align-items: center; gap: 16px;
-    box-shadow: 0 1px 4px rgba(0,0,0,.06); cursor: pointer;
+    background: var(--card); border-radius: 16px;
+    padding: 20px; display: flex; align-items: center; gap: 16px;
+    box-shadow: 0 1px 6px rgba(0,0,0,.07); cursor: pointer;
     border: 2px solid transparent; transition: border .15s;
     position: relative;
   }
   .menu-card.featured { border-color: var(--primary); }
   .menu-card:active { transform: scale(.98); }
   .menu-card .icon {
-    width: 46px; height: 46px; border-radius: 12px;
+    width: 48px; height: 48px; border-radius: 14px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 22px; flex-shrink: 0;
+    flex-shrink: 0;
+    background: var(--bg-outer); color: var(--primary);
   }
-  .menu-card.featured .icon { background: var(--primary); }
-  .menu-card:not(.featured) .icon { background: var(--bg); }
-  .menu-card .info h3 { font-size: 15px; font-weight: 700; }
-  .menu-card .info p  { font-size: 12px; color: var(--text-sub); margin-top: 3px; }
-  .menu-card .arrow { margin-left: auto; font-size: 18px; color: var(--text-sub); }
+  .menu-card.featured .icon { background: var(--primary); color: #fff; }
+  .menu-card .info h3 { font-size: 16px; font-weight: 700; }
+  .menu-card .info p  { font-size: 13px; color: var(--text-sub); margin-top: 4px; line-height: 1.4; }
+  .menu-card .arrow { margin-left: auto; color: var(--arrow); display: flex; flex-shrink: 0; }
   .menu-card .tag {
-    position: absolute; top: 12px; right: 12px;
+    position: absolute; top: 14px; right: 14px;
     background: var(--accent); color: #fff;
-    font-size: 9px; font-weight: 700; padding: 2px 7px; border-radius: 10px;
+    font-size: 10px; font-weight: 800; padding: 3px 9px; border-radius: 10px;
   }
 
   .home-progress { padding: 0 16px 4px; }
@@ -136,43 +156,43 @@
 
   /* ── 설정 ── */
   .start-screen { background: var(--primary); flex: 1; display: flex; flex-direction: column; }
-  .start-top { padding: 52px 24px 32px; color: #fff; }
-  .start-top h2 { font-size: 24px; font-weight: 700; }
-  .start-top p  { opacity: .7; font-size: 13px; margin-top: 6px; }
-  .start-body { background: var(--bg); border-radius: 28px 28px 0 0; flex: 1; padding: 28px 20px; overflow-y: auto; }
+  .start-top { padding: 52px 24px 30px; color: #fff; }
+  .start-top h2 { font-size: 26px; font-weight: 800; }
+  .start-top p  { opacity: .75; font-size: 14px; margin-top: 8px; line-height: 1.5; }
+  .start-body { background: var(--bg); border-radius: 28px 28px 0 0; flex: 1; padding: 26px 20px; overflow-y: auto; }
 
   .setting-section { margin-bottom: 22px; }
-  .setting-section h4 { font-size: 12px; font-weight: 700; color: var(--text-sub); letter-spacing: .4px; margin-bottom: 10px; }
+  .setting-section h4 { font-size: 13px; font-weight: 800; color: var(--text-sub); letter-spacing: .3px; margin-bottom: 12px; }
 
-  .subject-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .subject-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .subject-btn {
-    background: var(--card); border: 2px solid var(--border); border-radius: 12px;
-    padding: 12px; text-align: center; cursor: pointer; transition: all .15s;
-    font-size: 13px; font-weight: 600; color: var(--text-sub);
+    background: var(--card); border: 2px solid var(--border); border-radius: 14px;
+    padding: 14px; text-align: center; cursor: pointer; transition: all .15s;
+    font-size: 14px; font-weight: 700; color: var(--text-sub);
   }
   .subject-btn.selected { border-color: var(--primary); color: var(--primary); background: var(--opt-sel); }
 
-  .count-row { display: flex; gap: 8px; }
+  .count-row { display: flex; gap: 10px; }
   .count-btn {
-    flex: 1; padding: 12px; border: 2px solid var(--border);
-    border-radius: 12px; background: var(--card);
-    font-size: 14px; font-weight: 700; color: var(--text-sub);
+    flex: 1; padding: 14px; border: 2px solid var(--border);
+    border-radius: 14px; background: var(--card);
+    font-size: 15px; font-weight: 700; color: var(--text-sub);
     cursor: pointer; text-align: center; transition: all .15s;
   }
   .count-btn.selected { border-color: var(--primary); color: var(--primary); background: var(--opt-sel); }
 
   .bottom-actions { display: flex; gap: 10px; margin-top: 8px; }
   .btn-back {
-    flex: 0 0 54px; padding: 18px 0; border: 2px solid var(--border); border-radius: 16px;
+    flex: 0 0 56px; padding: 18px 0; border: 2px solid var(--border); border-radius: 16px;
     background: var(--card); color: var(--text);
     font-size: 18px; font-weight: 700; font-family: inherit;
-    cursor: pointer;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
   .bottom-actions .btn-back:only-child { flex: 1; }
   .btn-start {
     flex: 1; padding: 18px; border: none; border-radius: 16px;
     background: var(--primary); color: #fff;
-    font-size: 16px; font-weight: 700; font-family: inherit;
+    font-size: 16px; font-weight: 800; font-family: inherit;
     cursor: pointer;
   }
 
@@ -191,105 +211,118 @@
 
   /* ── 시험 ── */
   .exam-header { background: var(--primary); padding: 44px 16px 14px; color: #fff; }
-  .exam-top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .exam-top-row .exit { font-size: 13px; opacity: .75; cursor: pointer; }
+  .exam-top-row { position: relative; display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .exam-top-row .exit {
+    background: none; border: none; padding: 6px; margin: -6px;
+    color: #fff; cursor: pointer; display: flex; flex: 0 0 auto;
+  }
+  /* 진행 숫자는 좌우 버튼 폭과 무관하게 헤더 정중앙에 놓는다 */
+  .exam-progress {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+    display: flex; align-items: baseline; gap: 3px;
+  }
+  .exam-progress .cur   { font-size: 45px; font-weight: 800; line-height: 1; }
+  .exam-progress .total { font-size: 24px; font-weight: 600; opacity: .55; }
   .timer {
     display: flex; align-items: center; gap: 6px;
     background: rgba(255,255,255,.15); border-radius: 20px;
-    padding: 6px 14px; font-size: 14px; font-weight: 700;
+    padding: 7px 16px; font-size: 15px; font-weight: 800; flex: 0 0 auto;
   }
-  .timer.warning { background: rgba(245,166,35,.4); }
+  .timer.warning { background: rgba(218,149,11,.5); }
   .q-strip {
-    display: flex; gap: 6px; overflow-x: auto; padding: 2px 0 4px;
+    display: flex; gap: 7px; overflow-x: auto; padding: 2px 0 4px;
     scrollbar-width: none; cursor: grab;
   }
   .q-strip::-webkit-scrollbar { display: none; }
   .q-strip.dragging { cursor: grabbing; user-select: none; }
   .q-chip {
-    position: relative; flex: 0 0 32px; height: 32px; border-radius: 8px;
+    position: relative; flex: 0 0 34px; height: 34px; border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; cursor: pointer;
+    font-size: 13px; font-weight: 800; cursor: pointer;
     background: rgba(255,255,255,.14); color: rgba(255,255,255,.85);
     border: 2px solid transparent;
   }
   .q-chip.answered { background: rgba(255,255,255,.32); color: #fff; }
   .q-chip.current  { background: #fff; color: var(--primary); border-color: var(--accent); }
   .q-chip.flagged::after {
-    content: ''; position: absolute; top: -3px; right: -3px;
-    width: 8px; height: 8px; border-radius: 50%;
+    content: ''; position: absolute; top: -4px; right: -4px;
+    width: 9px; height: 9px; border-radius: 50%;
     background: var(--accent); border: 1px solid var(--primary);
   }
 
-  .exam-body { flex: 1; overflow-y: auto; padding: 0 0 100px; }
+  .exam-body { flex: 1; overflow-y: auto; padding: 0 0 110px; }
 
   .question-card {
-    background: var(--card); margin: 14px 14px 0;
-    border-radius: 18px; padding: 20px;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    background: var(--card); margin: 16px 14px 0;
+    border-radius: 20px; padding: 22px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.07);
   }
-  .q-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .q-meta { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .q-num {
     background: var(--primary); color: #fff;
-    width: 28px; height: 28px; border-radius: 8px;
+    width: 30px; height: 30px; border-radius: 9px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700; flex-shrink: 0;
+    font-size: 14px; font-weight: 800; flex-shrink: 0;
   }
   .q-subject {
-    font-size: 11px; font-weight: 600; color: var(--primary);
-    background: #E6F4EE; border-radius: 10px; padding: 3px 9px;
+    font-size: 12px; font-weight: 700;
+    border-radius: 10px; padding: 4px 10px;
   }
-  .q-diff { font-size: 10px; color: var(--text-sub); background: var(--bg); border-radius: 10px; padding: 3px 9px; }
-  .question-text { font-size: 15px; font-weight: 600; line-height: 1.65; }
+  .q-diff { font-size: 11px; color: var(--text-sub); background: var(--chip-bg); border-radius: 10px; padding: 4px 10px; }
+  .question-text { font-size: 16.5px; font-weight: 700; line-height: 1.7; }
 
-  .options-list { margin: 10px 14px 0; display: flex; flex-direction: column; gap: 9px; }
+  .options-list { margin: 12px 14px 0; display: flex; flex-direction: column; gap: 10px; }
   .opt-block { display: flex; flex-direction: column; }
   .option-item {
-    background: var(--card); border-radius: 14px; padding: 15px;
+    background: var(--card); border-radius: 16px; padding: 16px;
     display: flex; align-items: center; gap: 14px;
     cursor: pointer; border: 2px solid transparent;
     transition: border .15s, background .15s;
-    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
   }
   .option-item:active { transform: scale(.985); }
   .option-item.selected { border-color: var(--primary); background: var(--opt-sel); }
   .option-item.correct  { border-color: var(--correct); background: var(--correct-bg); }
   .option-item.wrong    { border-color: var(--wrong);   background: var(--wrong-bg); }
-  .option-item.has-explain { border-radius: 14px 14px 0 0; }
+  .option-item.idle     { border-color: var(--opt-border); }
+  .option-item.has-explain { border-radius: 16px 16px 0 0; border-bottom: none; }
   .opt-num {
-    width: 30px; height: 30px; border-radius: 50%;
+    width: 32px; height: 32px; border-radius: 50%;
     display: flex; align-items: center; justify-content: center;
-    font-size: 13px; font-weight: 700;
-    background: var(--bg); color: var(--text-sub);
+    font-size: 14px; font-weight: 800;
+    background: var(--chip-bg); color: var(--text-sub);
     flex-shrink: 0; transition: all .15s;
   }
   .option-item.selected .opt-num { background: var(--primary); color: #fff; }
   .option-item.correct  .opt-num { background: var(--correct); color: #fff; }
   .option-item.wrong    .opt-num { background: var(--wrong);   color: #fff; }
-  .opt-text { font-size: 14px; line-height: 1.5; font-weight: 500; }
-  .opt-icon { margin-left: auto; font-size: 16px; flex-shrink: 0; }
+  .opt-text { font-size: 15px; line-height: 1.6; font-weight: 600; flex: 1; }
+  .opt-icon { margin-left: auto; font-size: 17px; flex-shrink: 0; }
 
+  /* 보기 카드와 그 해설은 테두리를 공유해 한 덩어리로 보이게 한다 */
   .opt-explain {
-    padding: 11px 15px; font-size: 12.5px; line-height: 1.6;
-    border-radius: 0 0 14px 14px;
-    margin-top: -2px;
+    padding: 12px 16px; font-size: 13px; line-height: 1.7;
+    border: 2px solid transparent; border-top: none;
+    border-radius: 0 0 16px 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
   }
-  .opt-explain.correct { background: var(--correct-bg); color: #14532D; }
-  .opt-explain.wrong    { background: var(--wrong-bg);   color: #7F1D1D; }
-  .opt-explain.neutral  { background: var(--neutral-bg); color: var(--neutral-text); }
+  .opt-explain.correct { background: var(--correct-bg); color: var(--correct-text); border-color: var(--correct); }
+  .opt-explain.wrong   { background: var(--wrong-bg);   color: var(--wrong-text);   border-color: var(--wrong); }
+  .opt-explain.neutral { background: var(--neutral-bg); color: var(--neutral-text); border-color: var(--opt-border); }
 
   .explanation-card {
     background: var(--accent-lt); border-left: 3px solid var(--accent);
-    border-radius: 14px; margin: 10px 14px 0;
-    padding: 14px 16px; display: none;
+    border-radius: 16px; margin: 12px 14px 0;
+    padding: 16px 18px; display: none;
   }
   .explanation-card.show { display: block; }
-  .explanation-card .ex-title { font-size: 11px; font-weight: 700; color: #B8830A; margin-bottom: 6px; }
-  .explanation-card .ex-text  { font-size: 13px; line-height: 1.65; color: #7A5000; }
+  .explanation-card .ex-title { font-size: 12px; font-weight: 800; color: var(--accent-text); margin-bottom: 7px; }
+  .explanation-card .ex-text  { font-size: 13.5px; line-height: 1.7; color: var(--accent-deep); }
 
   .summary-note-card {
     background: var(--summary-bg); border-left: 3px solid var(--summary-border);
-    border-radius: 14px; margin: 10px 14px 0;
-    padding: 14px 16px;
+    border-radius: 16px; margin: 12px 14px 0;
+    padding: 16px 18px;
   }
   .summary-note-card .note-title { font-size: 13px; font-weight: 700; color: var(--summary-title); margin-bottom: 8px; }
   .summary-note-card .note-sub-title { font-size: 12.5px; font-weight: 700; color: var(--summary-title); margin: 8px 0 2px; }
@@ -298,105 +331,287 @@
   .summary-note-card .note-bullet::before { content: '·'; position: absolute; left: 0; }
 
   .check-btn {
-    width: calc(100% - 28px); margin: 10px 14px 0; padding: 13px;
-    border: 2px solid var(--primary); border-radius: 12px;
+    width: calc(100% - 28px); margin: 12px 14px 0; padding: 15px;
+    border: 2px solid var(--primary); border-radius: 14px;
     background: transparent; color: var(--primary);
-    font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+    font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer;
   }
 
-  .flag-btn {
-    margin-left: auto; font-size: 14px; color: var(--text-sub);
+  .flag-btn, .star-btn {
+    color: var(--text-sub);
     background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; display: flex; align-items: center; justify-content: center;
     cursor: pointer; flex-shrink: 0;
   }
-  .flag-btn.active { background: var(--accent-lt); border-color: var(--accent); }
-
-  .star-btn {
-    font-size: 14px; color: var(--text-sub);
-    background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
-    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; flex-shrink: 0;
-  }
-  .star-btn.active { background: var(--opt-sel); border-color: var(--primary); }
+  .flag-btn { margin-left: 0; }
+  .flag-btn.active { background: var(--accent-lt); border-color: var(--accent); color: var(--accent-text); }
+  .star-btn.active { background: var(--accent-lt); border-color: var(--accent); color: var(--accent-text); }
 
   .exam-nav {
     position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
     width: 100%; max-width: 390px;
     background: var(--card); border-top: 1px solid var(--border);
-    padding: 12px 16px 28px;
+    padding: 14px 16px 30px;
     display: flex; align-items: center; gap: 10px;
   }
   .nav-btn {
-    flex: 1; padding: 14px; border: 2px solid var(--border);
-    border-radius: 12px; background: var(--card);
-    font-size: 14px; font-weight: 600; font-family: inherit;
+    flex: 1; padding: 15px; border: 2px solid var(--border);
+    border-radius: 14px; background: var(--card);
+    font-size: 15px; font-weight: 700; font-family: inherit;
     color: var(--text); cursor: pointer;
   }
   .nav-btn:disabled { opacity: .35; cursor: not-allowed; }
-  .nav-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); flex: 2; }
+  .nav-btn.primary { background: var(--primary); color: #fff; border-color: var(--primary); flex: 2; font-weight: 800; }
   .nav-btn:active:not(:disabled) { transform: scale(.97); }
-  .nav-flag-btn { flex: 0 0 46px; padding: 14px 0; font-size: 16px; color: var(--accent); border-color: var(--accent); }
+  /* 라벨을 붙여 "체크한 문제로 이동"임을 드러낸다 (체크 토글은 문제 카드 안 깃발 버튼) */
+  .nav-flag-btn {
+    flex: 0 0 68px; padding: 9px 0 8px;
+    border-color: var(--accent); color: var(--accent-text);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  }
+  .nav-flag-btn .nf-label { font-size: 10px; font-weight: 700; }
 
   /* ── 결과 ── */
-  .result-screen { background: var(--bg); flex: 1; overflow-y: auto; padding-bottom: 32px; }
-  .result-header { background: var(--primary); padding: 52px 24px 80px; text-align: center; color: #fff; }
-  .result-header .result-emoji { font-size: 52px; margin-bottom: 10px; }
-  .result-header h2 { font-size: 24px; font-weight: 700; }
-  .result-header p  { opacity: .75; font-size: 14px; margin-top: 6px; }
+  .result-screen { background: var(--bg); flex: 1; overflow-y: auto; padding-bottom: 36px; }
+  .result-header { background: var(--primary); padding: 52px 24px 84px; text-align: center; color: #fff; }
+  .result-header .result-mark { margin-bottom: 14px; display: flex; justify-content: center; }
+  .result-header h2 { font-size: 25px; font-weight: 800; }
+  .result-header p  { opacity: .8; font-size: 14px; margin-top: 8px; }
 
   .score-card {
-    background: var(--card); margin: -44px 16px 0;
-    border-radius: 20px; padding: 28px 24px;
-    box-shadow: 0 4px 20px rgba(0,0,0,.1); text-align: center;
+    background: var(--card); margin: -48px 16px 0;
+    border-radius: 22px; padding: 30px 24px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.12); text-align: center;
   }
   .score-ring {
-    width: 120px; height: 120px; border-radius: 50%;
-    border: 8px solid var(--border); margin: 0 auto 16px;
+    width: 132px; height: 132px; border-radius: 50%;
+    border: 9px solid var(--border); margin: 0 auto 18px;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
   }
   .score-ring.pass { border-color: var(--correct); }
   .score-ring.fail { border-color: var(--wrong); }
-  .score-ring .score-num { font-size: 32px; font-weight: 700; }
-  .score-ring .score-unit { font-size: 12px; color: var(--text-sub); }
+  .score-ring .score-num { font-size: 36px; font-weight: 800; }
+  .score-ring .score-unit { font-size: 13px; font-weight: 600; color: var(--text-sub); }
   .pass-badge {
-    display: inline-block; padding: 6px 20px; border-radius: 20px;
-    font-size: 14px; font-weight: 700;
+    display: inline-block; padding: 7px 22px; border-radius: 20px;
+    font-size: 15px; font-weight: 800;
   }
-  .pass-badge.pass { background: var(--correct-bg); color: var(--correct); }
+  .pass-badge.pass { background: var(--correct-bg); color: #006818; }
   .pass-badge.fail { background: var(--wrong-bg);   color: var(--wrong); }
 
-  .result-details { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-  .detail-card { background: var(--card); border-radius: 16px; padding: 16px 18px; }
-  .detail-card h4 { font-size: 13px; font-weight: 700; color: var(--text-sub); margin-bottom: 12px; }
+  .result-details { padding: 18px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+  .detail-card { background: var(--card); border-radius: 18px; padding: 20px; }
+  .detail-card h4 { font-size: 14px; font-weight: 800; color: var(--text-sub); margin-bottom: 14px; }
   .wrong-item, .star-item { cursor: pointer; }
   .wrong-item:active, .star-item:active { transform: scale(.98); }
-  .subject-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .subject-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
   .subject-row:last-child { margin-bottom: 0; }
-  .subject-row .s-name { font-size: 12px; font-weight: 500; width: 90px; flex-shrink: 0; }
-  .s-bar { flex: 1; height: 7px; background: var(--bg); border-radius: 4px; overflow: hidden; }
-  .s-fill { height: 100%; border-radius: 4px; }
-  .s-pct { font-size: 12px; font-weight: 700; width: 34px; text-align: right; }
+  .subject-row .s-name { font-size: 13px; font-weight: 600; width: 96px; flex-shrink: 0; }
+  .s-bar { flex: 1; height: 9px; background: var(--track); border-radius: 5px; overflow: hidden; }
+  .s-fill { height: 100%; border-radius: 5px; }
+  .s-pct { font-size: 13px; font-weight: 800; width: 38px; text-align: right; }
 
-  .result-actions { padding: 0 16px; display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
-  .btn-retry { width: 100%; padding: 17px; border: none; border-radius: 14px; background: var(--primary); color: #fff; font-size: 15px; font-weight: 700; font-family: inherit; cursor: pointer; }
-  .btn-home  { width: 100%; padding: 17px; border: 2px solid var(--border); border-radius: 14px; background: var(--card); color: var(--text); font-size: 15px; font-weight: 600; font-family: inherit; cursor: pointer; }
+  .result-actions { padding: 20px 16px 0; display: flex; flex-direction: column; gap: 10px; }
+  .btn-retry { width: 100%; padding: 18px; border: none; border-radius: 16px; background: var(--primary); color: #fff; font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer; }
+  .btn-home  { width: 100%; padding: 18px; border: 2px solid var(--border); border-radius: 16px; background: var(--card); color: var(--text); font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; }
+
+  /* ── 목록(오답노트·즐겨찾기) ── */
+  .list-item { position: relative; }
+  .list-item .li-top { display: flex; align-items: center; margin-bottom: 10px; }
+  .li-remove {
+    margin-left: auto; background: var(--chip-bg); border: none;
+    border-radius: 9px; width: 28px; height: 28px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-sub); cursor: pointer;
+  }
+  .li-remove:active { transform: scale(.92); }
 
   .error-box {
-    background: var(--wrong-bg); border: 1px solid #FCA5A5;
-    border-radius: 14px; padding: 16px; margin-bottom: 16px;
-    font-size: 13px; color: var(--wrong); text-align: center; line-height: 1.6;
+    background: var(--wrong-bg); border: 1px solid #F0A9A6;
+    border-radius: 16px; padding: 18px; margin-bottom: 16px;
+    font-size: 13.5px; color: var(--wrong); text-align: center; line-height: 1.6;
   }
+
+  /* ── 하단 탭 바 ──
+     시험 화면은 하단을 .exam-nav가 이미 쓰므로 그때는 감춘다. */
+  .tab-bar {
+    position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 100%; max-width: 390px; z-index: 20;
+    background: var(--card); border-top: 1px solid var(--border);
+    display: none; padding: 7px 0 max(10px, env(safe-area-inset-bottom));
+  }
+  .tab-bar.show { display: flex; }
+  .phone-wrap.has-tabbar { padding-bottom: 72px; }
+  .tab-item {
+    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px;
+    padding: 3px 0; background: none; border: none;
+    font-family: inherit; color: var(--tab-idle); cursor: pointer;
+  }
+  .tab-item .t-icon { display: flex; line-height: 1; }
+  .tab-item .t-label { font-size: 10px; font-weight: 700; }
+  .tab-item.active { color: var(--primary); }
+  /* 즐겨찾기 탭만 활성 시 별을 채운다 */
+  .tab-item.active[data-tab="star"] .t-icon svg { fill: currentColor; }
+  .tab-item:active { transform: scale(.95); }
+
+  /* ── 설정 ── */
+  .account-card {
+    background: var(--primary); color: #fff;
+    border-radius: 16px; padding: 18px 20px;
+  }
+  .account-card .a-label { font-size: 11px; opacity: .7; }
+  .account-card .a-name {
+    font-size: 16px; font-weight: 700; margin-top: 3px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .account-card .a-msg { font-size: 12px; opacity: .8; margin-top: 10px; line-height: 1.5; }
+  .account-card .a-actions { display: flex; gap: 8px; margin-top: 14px; }
+  .acct-btn {
+    background: rgba(255,255,255,.18); color: #fff;
+    border: none; border-radius: 14px; padding: 10px 16px;
+    font-size: 13px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  .acct-btn:active { transform: scale(.97); }
+  .acct-btn.kakao { background: #FEE500; color: #191600; }
+
+  .settings-list { display: flex; flex-direction: column; gap: 8px; }
+  .settings-row {
+    width: 100%; background: var(--card); border: 2px solid var(--border); border-radius: 14px;
+    padding: 15px 16px; display: flex; align-items: center; gap: 10px;
+    cursor: pointer;
+    font-size: 14px; font-weight: 700; font-family: inherit;
+    color: var(--text); text-align: left; text-decoration: none;
+  }
+  .settings-row:active { transform: scale(.99); }
+  .settings-row .s-right { margin-left: auto; font-size: 13px; font-weight: 800; color: var(--arrow); }
+  .settings-row.pro { border-color: var(--accent); }
+  .settings-row.pro .s-right { color: var(--accent-text); }
+  .settings-row.danger { color: var(--wrong); }
+  .settings-row.static { cursor: default; }
+  .settings-hint { font-size: 12px; color: var(--text-sub); line-height: 1.6; padding: 8px 4px 0; }
+  .settings-hint a { color: var(--accent-text); font-weight: 700; text-decoration: none; }
+
+  /* ── 프로 버전 ── */
+  .pro-hero {
+    background: linear-gradient(155deg, #E8A81E 0%, #C06A00 100%);
+    color: #fff; border-radius: 20px; padding: 24px 20px; text-align: center;
+  }
+  .pro-hero .p-kicker { font-size: 13px; font-weight: 700; opacity: .9; }
+  .pro-hero .p-head { font-size: 21px; font-weight: 800; margin-top: 5px; }
+  .pro-hero .p-price { margin-top: 14px; font-size: 32px; font-weight: 800; }
+  .pro-hero .p-price s { font-size: 15px; font-weight: 400; opacity: .7; margin-right: 8px; }
+  .pro-hero .p-price small { font-size: 13px; font-weight: 700; }
+
+  .pro-benefit {
+    background: var(--card); border-radius: 16px; padding: 17px 18px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  .pro-benefit h5 { font-size: 15px; font-weight: 700; }
+  .pro-benefit p { font-size: 13px; line-height: 1.6; color: var(--text-sub); margin-top: 6px; }
+  .pro-benefit .cmp { display: flex; gap: 8px; margin-top: 11px; font-size: 12px; flex-wrap: wrap; }
+  .pro-benefit .cmp span { border-radius: 8px; padding: 4px 10px; }
+  .pro-benefit .cmp .free { background: var(--neutral-bg); color: var(--neutral-text); }
+  .pro-benefit .cmp .paid { background: var(--accent-lt); color: var(--accent-text); font-weight: 800; }
+
+  .btn-upgrade {
+    flex: 1; padding: 17px; border: none; border-radius: 16px;
+    background: var(--accent); color: #fff;
+    font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer;
+  }
+  .btn-upgrade:disabled { background: var(--border); color: var(--text-sub); cursor: default; }
+
+  /* 청약철회 제한 동의.
+     환불정책 제3조가 "결제 화면에서 고지하고 동의를 받는다"고 공개적으로 약속했으므로,
+     이 체크 없이는 결제로 넘어갈 수 없어야 한다. */
+  .agree-row {
+    display: flex; gap: 10px; align-items: flex-start;
+    background: var(--card); border: 2px solid var(--border); border-radius: 14px;
+    padding: 14px 15px; margin-top: 10px; cursor: pointer;
+  }
+  .agree-row.checked { border-color: var(--accent); background: #FFFDF8; }
+  .agree-row input { width: 19px; height: 19px; margin-top: 1px; flex-shrink: 0; accent-color: var(--accent); }
+  .agree-row span { font-size: 12.5px; line-height: 1.65; color: var(--text); }
+  .agree-row a { color: var(--accent-text); font-weight: 700; }
+
+  /* 프로 전용 콘텐츠 자리에 놓이는 잠금 안내.
+     실제 해설·요약노트는 서버가 무료 응답에서 빼고 내려주므로 가릴 본문 자체가 없다. */
+  .lock-card {
+    background: var(--accent-lt); border: 1px dashed var(--accent);
+    border-radius: 16px; margin: 12px 14px 0; padding: 16px 18px;
+    text-align: center; cursor: pointer;
+  }
+  .lock-card:active { transform: scale(.99); }
+  .lock-card .l-title {
+    font-size: 14px; font-weight: 800; color: #312D28;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .lock-card .l-title svg { color: var(--accent-deep); flex-shrink: 0; }
+  .lock-card .l-sub { font-size: 12.5px; color: var(--text-sub); margin-top: 6px; line-height: 1.6; }
+  .lock-card .l-cta { font-size: 12.5px; font-weight: 700; color: var(--accent-deep); margin-top: 4px; }
+  /* 목록 화면 안에서는 문제 화면용 좌우 여백이 필요 없다 */
+  .start-body .lock-card { margin: 0 0 14px; }
+
+  /* ── 요약노트 목록 ── */
+  /* 과목이 7개뿐이라 가로 스크롤보다 두 줄로 다 보여주는 편이 낫다 */
+  .note-filter { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+  .note-chip {
+    padding: 7px 12px; border-radius: 999px;
+    border: 1.5px solid var(--border); background: var(--card);
+    font-size: 12.5px; font-weight: 700; color: var(--text-sub);
+    font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .note-chip.selected { border-color: var(--primary); background: var(--opt-sel); color: var(--primary); }
+  /* 좁은 기기에서 "안전관리" 하나가 셋째 줄로 밀려나지 않을 만큼만 조인다 */
+  @media (max-width: 359px) {
+    .note-filter { gap: 6px; }
+    .note-chip { padding: 7px 9px; font-size: 12px; }
+  }
+
+  .note-search {
+    width: 100%; padding: 13px 16px; margin-bottom: 14px;
+    border: 1.5px solid var(--border); border-radius: 14px;
+    background: var(--card); color: var(--text);
+    font-size: 14px; font-family: inherit;
+  }
+  .note-search:focus { outline: none; border-color: var(--primary); }
+  .note-search::placeholder { color: var(--arrow); }
+
+  .note-item {
+    background: var(--card); border-radius: 16px; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+  .note-head { display: flex; align-items: center; gap: 10px; padding: 15px 16px; cursor: pointer; }
+  .note-head .n-title { font-size: 14.5px; font-weight: 700; line-height: 1.5; }
+  .note-head .n-mark { margin-left: auto; flex-shrink: 0; display: flex; color: var(--arrow); }
+  .note-head .n-mark svg { transition: transform .18s; }
+  .note-item.open .n-mark svg { transform: rotate(90deg); }
+  /* 잠긴 항목은 펼쳐지지 않는다 — 자물쇠를 눌러도 구매 안내로만 간다 */
+  .note-item.locked .n-mark { color: var(--accent-deep); }
+  .note-body { display: none; padding: 0 16px 16px; }
+  .note-item.open .note-body { display: block; }
+  .note-body .summary-note-card { margin: 0; }
 </style>
 </head>
 <body>
 <div class="phone-wrap">
 
+  <!-- 온보딩 (첫 방문에만 뜬다. 3초 뒤 자동 이동, 누르면 즉시 이동) -->
+  <div class="screen" id="screen-onboarding">
+    <div class="onboarding" onclick="leaveOnboarding()">
+      <img class="ob-photo" src="/assets/onboarding.jpg" alt="">
+      <div class="ob-shade"></div>
+      <div class="ob-copy">
+        <div class="ob-badge">한식조리기능사 필기</div>
+        <h1>최신 한식조리기능사<br>합격노트</h1>
+        <p>최신 기출과 예상문제로,<br>합격까지 가장 빠른 길을 걸어보세요.</p>
+      </div>
+    </div>
+  </div>
+
   <!-- 홈 -->
   <div class="screen active" id="screen-home">
     <div class="home-header">
-      <div class="account-bar" id="account-bar"></div>
-      <div class="badge">🍳 한식조리기능사</div>
+      <div class="badge">한식조리기능사</div>
       <h1>필기 CBT<br>기출예상문제</h1>
       <p>실제 출제 예상 문제로 합격을 준비하세요</p>
     </div>
@@ -408,40 +623,72 @@
     <div class="home-progress" id="home-progress" style="display:none"></div>
     <div class="home-menu">
       <div class="menu-card featured" onclick="goToMockStart()">
-        <div class="icon">📝</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="8.5" y1="8" x2="15.5" y2="8"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="8.5" y1="16" x2="13" y2="16"/></svg></div>
         <div class="info"><h3>CBT 기출예상문제</h3><p>실제 문제로 시험 연습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
         <div class="tag">추천</div>
       </div>
       <div class="menu-card" onclick="goToGisulStart()">
-        <div class="icon">🎯</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></svg></div>
         <div class="info"><h3>기출문제</h3><p>최근 시행된 기출문제로 실전 연습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
       <div class="menu-card" onclick="goToChapterStart()">
-        <div class="icon">📖</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21.5z"/></svg></div>
         <div class="info"><h3>단원별 연습</h3><p>과목을 선택해 집중 학습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
+      </div>
+      <div class="menu-card" onclick="goToSummaryNotes()">
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h10.5L20 6.5V21H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M16 3v4h4"/><line x1="9" y1="12" x2="16" y2="12"/><line x1="9" y1="16" x2="13.5" y2="16"/></svg></div>
+        <div class="info"><h3>요약노트 보기</h3><p>과목별 핵심 정리를 한눈에</p></div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
+        <div class="tag" id="home-note-tag">프로</div>
       </div>
       <div class="menu-card" onclick="goToWrongNote()">
-        <div class="icon">📋</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v2H9z"/><path d="M8.5 12.5l2 2 4-4.2"/><line x1="8.5" y1="16.5" x2="15.5" y2="16.5"/></svg></div>
         <div class="info"><h3>오답노트</h3><p>틀린 문제만 모아서 복습</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
       <div class="menu-card" onclick="goToStarList()">
-        <div class="icon">⭐</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg></div>
         <div class="info"><h3>즐겨찾기</h3><p>내가 표시한 문제만 모아보기</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
       <div class="menu-card" onclick="goToResults()">
-        <div class="icon">📊</div>
+        <div class="icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="19" x2="6" y2="12"/><line x1="12" y1="19" x2="12" y2="6"/><line x1="18" y1="19" x2="18" y2="10"/></svg></div>
         <div class="info"><h3>나의 풀이결과</h3><p>누적 풀이 통계 확인하기</p></div>
-        <div class="arrow">›</div>
+        <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
     </div>
   </div>
 
-  <!-- 설정 -->
+  <!-- 설정 (하단 탭) -->
+  <div class="screen" id="screen-settings">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>설정</h2>
+        <p>계정과 학습 데이터를 관리하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="settings-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 프로 버전 -->
+  <div class="screen" id="screen-pro">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>프로 버전</h2>
+        <p>해설과 요약노트로 더 빠르게 합격하세요</p>
+      </div>
+      <div class="start-body">
+        <div id="pro-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CBT 기출예상문제 설정 -->
   <div class="screen" id="screen-start">
     <div class="start-screen">
       <div class="start-top">
@@ -575,6 +822,19 @@
     </div>
   </div>
 
+  <!-- 요약노트 -->
+  <div class="screen" id="screen-summary-notes">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2>요약노트</h2>
+        <p>과목별 핵심 정리를 모아봤습니다</p>
+      </div>
+      <div class="start-body">
+        <div id="summary-notes-body"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- 나의 풀이결과 -->
   <div class="screen" id="screen-results">
     <div class="start-screen">
@@ -600,14 +860,18 @@
   <div class="screen" id="screen-exam">
     <div class="exam-header">
       <div class="exam-top-row">
-        <span class="exit" onclick="confirmExit()">✕ 종료</span>
-        <div class="timer" id="timer">⏱ <span id="timer-text">60:00</span></div>
+        <button class="exit" onclick="confirmExit()" aria-label="시험 종료"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg></button>
+        <div class="exam-progress"><span class="cur" id="q-progress-cur">1</span><span class="total" id="q-progress-total">/10</span></div>
+        <div class="timer" id="timer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg> <span id="timer-text">60:00</span></div>
       </div>
       <div class="q-strip" id="q-strip"></div>
     </div>
     <div class="exam-body" id="exam-body"></div>
     <div class="exam-nav">
-      <button class="nav-btn nav-flag-btn" id="btn-flag-jump" onclick="jumpToFlagged()" title="체크한 문제로 이동">🚩</button>
+      <button class="nav-btn nav-flag-btn" id="btn-flag-jump" onclick="jumpToFlagged()" title="체크한 문제로 이동">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4.5L18 13H5"/></svg>
+        <span class="nf-label">문제체크</span>
+      </button>
       <button class="nav-btn" id="btn-prev" onclick="prevQ()">‹ 이전</button>
       <button class="nav-btn primary" id="btn-next" onclick="nextQ()">다음 ›</button>
     </div>
@@ -617,7 +881,7 @@
   <div class="screen" id="screen-result">
     <div class="result-screen">
       <div class="result-header">
-        <div class="result-emoji" id="result-emoji">🎉</div>
+        <div class="result-mark" id="result-mark"></div>
         <h2 id="result-title">수고하셨습니다!</h2>
         <p id="result-subtitle">최종 결과를 확인하세요</p>
       </div>
@@ -642,15 +906,45 @@
     </div>
   </div>
 
+  <nav class="tab-bar" id="tab-bar"></nav>
 </div>
 <script src="/vendor/supabase.js"></script>
 <script>
-/* ── 상수 ── */
+/* ── 상수 ──
+   과목 색은 명도·채도를 고정하고 색상(hue)만 다르게 둔 디자인 팔레트다.
+   태그 배경은 같은 hue의 밝은 톤을 따로 표에 둔다. 예전처럼 `${색}18`로
+   알파를 이어 붙이면 색 형식이 바뀔 때 통째로 무효가 되기 때문이다. */
 const SUBJ_COLOR = {
-  '기초조리실무':'#3B82F6','위생관리':'#EF4444','재료관리':'#EAB308',
-  '구매관리':'#22C55E','한식조리실무':'#8B5CF6','안전관리':'#F97316'
+  '기초조리실무':'#116BB5','위생관리':'#B33736','재료관리':'#847200',
+  '구매관리':'#1E7729','한식조리실무':'#714CA6','안전관리':'#B74D00'
 };
-const DIFF_COLOR = {'하':'#22C55E','중':'#EAB308','상':'#EF4444'};
+const SUBJ_BG = {
+  '기초조리실무':'#DDEDFF','위생관리':'#FFE4E1','재료관리':'#FFED84',
+  '구매관리':'#BDFFBE','한식조리실무':'#EEE7FF','안전관리':'#FFE5D7'
+};
+const SUBJ_FALLBACK = '#5B5752', SUBJ_BG_FALLBACK = '#EDEBE7';
+const subjColor = s => SUBJ_COLOR[s] || SUBJ_FALLBACK;
+const subjBg    = s => SUBJ_BG[s]    || SUBJ_BG_FALLBACK;
+const DIFF_COLOR = {'하':'#1B7E2A','중':'#847200','상':'#C92F33'};
+
+/* 아이콘은 전부 인라인 SVG다 (이모지는 기기마다 모양·색이 달라진다) */
+const SVG_OPEN = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">';
+const ICONS = {
+  home:  SVG_OPEN + '<path d="M4 11l8-7 8 7"/><path d="M6 9.5V20h12V9.5"/></svg>',
+  wrong: SVG_OPEN + '<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 3.5h6v2H9z"/><path d="M8.5 12.5l2 2 4-4.2"/><line x1="8.5" y1="16.5" x2="15.5" y2="16.5"/></svg>',
+  star:  '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  stats: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="6" y1="19" x2="6" y2="12"/><line x1="12" y1="19" x2="12" y2="6"/><line x1="18" y1="19" x2="18" y2="10"/></svg>',
+  settings: SVG_OPEN + '<circle cx="12" cy="12" r="3"/><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2-1.5-2-3.4-2.3.9a7.6 7.6 0 0 0-1.7-1l-.3-2.4h-4l-.3 2.4a7.6 7.6 0 0 0-1.7 1l-2.3-.9-2 3.4L6.6 11a7.6 7.6 0 0 0 0 2l-2 1.5 2 3.4 2.3-.9a7.6 7.6 0 0 0 1.7 1l.3 2.4h4l.3-2.4a7.6 7.6 0 0 0 1.7-1l2.3.9 2-3.4z"/></svg>',
+  lock:  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
+  close: '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  chev:  '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+  pass:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M8 12.3l2.7 2.7L16 9.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  fail:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6"><circle cx="12" cy="12" r="10"/><path d="M9 9l6 6M15 9l-6 6" stroke-linecap="round"/></svg>',
+  book:  '<svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5.5A2.5 2.5 0 0 1 5.5 3H11v16H5.5A2.5 2.5 0 0 0 3 21.5z"/><path d="M21 5.5A2.5 2.5 0 0 0 18.5 3H13v16h5.5A2.5 2.5 0 0 1 21 21.5z"/></svg>',
+};
+/* 문제 카드의 별·깃발은 채움 여부로 상태를 나타낸다 */
+const starIcon = on => `<svg width="16" height="16" viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.2l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>`;
+const flagIcon = on => `<svg width="15" height="15" viewBox="0 0 24 24" fill="${on?'currentColor':'none'}" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h13l-3 4.5L18 13H5"/></svg>`;
 
 /* ── 상태 ── */
 let QUESTIONS = [], answers = [], revealed = [], flagged = [];
@@ -682,6 +976,96 @@ let currentUser = null;
 const ACCOUNT = { marks: new Map(), history: [] }; // 로그인 시 서버에서 채운다
 const QCACHE = new Map();                          // 문항 id → 본문 (계정엔 참조만 저장하므로)
 const isSignedIn = () => currentUser !== null;
+
+/* ── 프로(유료) 권한 ──
+   화면을 가리는 것만으로는 못 막는다. 프로 전용 데이터(보기별 해설·요약노트)는
+   서버가 응답에서 아예 빼고 내려주고, 여기 IS_PRO는 "무엇을 그릴지"만 결정한다.
+   권한은 user_entitlements 테이블이 원본이며 클라이언트는 읽기만 할 수 있다. */
+let IS_PRO = false;
+const isPro = () => IS_PRO;
+
+/* ── 가격 ──
+   금액의 원본은 서버(api/_pricing.js)다. 주문 생성·승인이 같은 값을 읽고 클라이언트가 보낸
+   금액은 쓰지 않으므로, 여기 값은 오직 "보여주기" 용도다.
+   받아오기 전에는 금액을 비워 둔다 — 틀린 금액을 잠깐이라도 띄우지 않는다.
+   결제 개시 여부(checkoutEnabled)도 같이 받는다. 서버에 토스 키가 없으면 false 로 오고,
+   프로 화면은 결제 버튼 대신 "준비 중"을 띄운다. */
+let PRICING = null;
+let pricingPromise = null;
+function loadPricing() {
+  if (PRICING) return Promise.resolve(PRICING);
+  if (!pricingPromise) {
+    pricingPromise = fetch('/api/pricing')
+      .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then(d => {
+        if (!Number.isFinite(d.price) || !Number.isFinite(d.listPrice)) {
+          throw new Error('가격 형식이 올바르지 않습니다');
+        }
+        // 결제 가능 여부도 서버가 정한다(토스 키가 들어와 있는가).
+        // 값이 없거나 이상하면 잠그는 쪽으로 본다 — 열 수 없는 결제창을 띄우는 것보다 낫다.
+        PRICING = { price: d.price, listPrice: d.listPrice, checkoutEnabled: d.checkoutEnabled === true };
+        return PRICING;
+      })
+      .finally(() => { pricingPromise = null; });
+  }
+  return pricingPromise;
+}
+const priceText = n => `${n.toLocaleString()}원`;
+
+async function loadEntitlement() {
+  const { data, error } = await SB.from('user_entitlements')
+    .select('is_pro,expires_at').maybeSingle();
+  if (error) throw new Error(error.message);
+  IS_PRO = !!(data && data.is_pro
+    && (!data.expires_at || new Date(data.expires_at).getTime() > Date.now()));
+}
+
+/* 권한은 앱 밖에서 바뀐다 — 지금은 관리자가 SQL로 부여하고, 나중에는 결제 승인이 부여한다.
+   로그인 시점에 한 번만 조회하면 그 값이 세션 내내 굳어서, 프로가 되어도 로그아웃했다가
+   다시 로그인해야 반영됐다. 프로 여부가 드러나는 화면에 들어올 때마다 다시 확인한다.
+   조회에 실패하면 지금 값을 그대로 둔다 (네트워크가 잠깐 끊겼다고 프로를 뺏지 않는다). */
+async function refreshEntitlement() {
+  if (!isSignedIn()) return;
+  const before = IS_PRO;
+  try {
+    await loadEntitlement();
+  } catch (e) {
+    console.warn('권한 조회 실패:', e.message);
+    return;
+  }
+  if (IS_PRO === before) return;
+
+  resetProContent(); // 무료일 때 받아둔 프로 전용 콘텐츠 캐시를 버린다
+  if (document.getElementById('screen-settings').classList.contains('active')) renderSettings();
+  if (document.getElementById('screen-pro').classList.contains('active')) renderProScreen();
+}
+
+/* 권한이 바뀌면 요약노트를 다시 받아야 한다.
+   (무료일 때 받은 제목뿐인 목록이 로그인 후에도 세션 내내 굳어버리는 것을 막는다) */
+function resetProContent() {
+  SUMMARY_NOTES = [];
+  summaryNotesLoaded = false;
+  summaryNotesLocked = true;
+  syncHomeProBadge();
+  // 열려 있는 요약노트 화면은 새 권한으로 다시 그린다
+  if (document.getElementById('screen-summary-notes').classList.contains('active')) {
+    renderSummaryNotesScreen();
+  }
+}
+
+/* 홈 메뉴의 "프로" 뱃지는 무료일 때만 붙인다 */
+function syncHomeProBadge() {
+  document.getElementById('home-note-tag').style.display = isPro() ? 'none' : '';
+}
+
+/* 서버가 프로 여부를 판정할 수 있도록 세션 토큰을 실어 보낸다. 비로그인이면 헤더 없음 */
+async function authHeaders() {
+  try {
+    const { data } = await SB.auth.getSession();
+    const token = data && data.session && data.session.access_token;
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  } catch(e) { return {}; }
+}
 
 /* 서버 반영은 화면을 막지 않는다. 순서 보장을 위해 한 줄로 이어 붙인다. */
 let remoteChain = Promise.resolve();
@@ -726,9 +1110,10 @@ function setMark(q, flag, on) {
 /* 계정엔 문항 참조만 있으므로 본문은 서버에서 받아 캐시한다 */
 async function hydrateQuestionCache(refs) {
   const missing = refs.filter(r => r.source && !QCACHE.has(r.id));
+  const auth = await authHeaders();
   for (let i = 0; i < missing.length; i += 400) {
     const res = await fetch('/api/questions', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({ ids: missing.slice(i, i + 400) }),
     });
     if (!res.ok) return;
@@ -760,10 +1145,11 @@ async function loadAccountData() {
 async function resolveSources(ids) {
   const out = new Map();
   const SOURCES = ['mock', 'gisul_yesang', 'gisul'];
+  const auth = await authHeaders();
   for (let i = 0; i < ids.length; i += 150) {
     const refs = ids.slice(i, i + 150).flatMap(id => SOURCES.map(source => ({ source, id })));
     const res = await fetch('/api/questions', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json', ...auth },
       body: JSON.stringify({ ids: refs }),
     });
     if (!res.ok) continue;
@@ -836,15 +1222,272 @@ function accountLabel(user) {
   return user.email || m.name || m.full_name || m.preferred_username || m.user_name || '로그인됨';
 }
 
-function renderAccountBar(msg) {
-  const el = document.getElementById('account-bar');
+/* 로그인 직후 마이그레이션 결과 안내. 설정 화면을 다시 그려도 남아 있어야 한다 */
+let syncMessage = '';
+
+function goToSettings() { renderSettings(); goTo('screen-settings'); refreshEntitlement(); }
+
+function renderSettings(msg) {
+  if (msg !== undefined) syncMessage = msg;
+  const el = document.getElementById('settings-body');
   if (!el) return;
-  el.innerHTML = isSignedIn()
-    ? `<span class="acct-who">${esc(accountLabel(currentUser))}</span>
-       <button class="acct-btn" data-act="signout">로그아웃</button>`
-    : `<button class="acct-btn" data-act="signin" data-provider="google">구글 로그인</button>
-       <button class="acct-btn kakao" data-act="signin" data-provider="kakao">카카오 로그인</button>`;
-  if (msg) el.insertAdjacentHTML('afterbegin', `<span class="acct-msg">${esc(msg)}</span>`);
+
+  const account = isSignedIn()
+    ? `<div class="account-card">
+         <div class="a-label">로그인 계정</div>
+         <div class="a-name">${esc(accountLabel(currentUser))}</div>
+         ${syncMessage ? `<div class="a-msg">${esc(syncMessage)}</div>` : ''}
+         <div class="a-actions">
+           <button class="acct-btn" data-act="signout">로그아웃</button>
+         </div>
+       </div>`
+    : `<div class="account-card">
+         <div class="a-label">로그인하지 않음</div>
+         <div class="a-name">이 기기에만 저장됩니다</div>
+         <div class="a-msg">로그인하면 오답노트·즐겨찾기·풀이기록이 계정에 저장되어 다른 기기에서도 이어집니다.</div>
+         <div class="a-actions">
+           <button class="acct-btn" data-act="signin" data-provider="google">구글 로그인</button>
+           <button class="acct-btn kakao" data-act="signin" data-provider="kakao">카카오 로그인</button>
+         </div>
+       </div>`;
+
+  const crown = `<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1" style="color:var(--accent);flex-shrink:0"><path d="M3 8l4 3 5-6 5 6 4-3-2 10H5z"/></svg>`;
+  const proRow = isPro()
+    ? `<div class="settings-row pro static">${crown} 프로 버전<span class="s-right">이용중 ✓</span></div>`
+    : `<button class="settings-row pro" data-act="pro">${crown} 프로 버전 구매<span class="s-right">${PRICING ? priceText(PRICING.price) : ''}</span></button>`;
+
+  el.innerHTML = `
+    <div class="setting-section">
+      <h4>계정</h4>
+      ${account}
+    </div>
+    <div class="setting-section">
+      <h4>프로버전</h4>
+      <div class="settings-list">${proRow}</div>
+    </div>
+    <div class="setting-section">
+      <h4>데이터</h4>
+      <div class="settings-list">
+        <button class="settings-row danger" data-act="reset">학습 데이터 초기화<span class="s-right">›</span></button>
+      </div>
+      <div class="settings-hint">${isSignedIn()
+        ? '오답노트·즐겨찾기·풀이기록은 계정에 자동 저장됩니다. 따로 백업하지 않아도 됩니다.'
+        : '지금은 이 기기에만 저장됩니다. 로그인하면 기존 기록이 계정으로 옮겨집니다.'}</div>
+    </div>
+    <div class="setting-section">
+      <h4>문의</h4>
+      <div class="settings-list">
+        <a class="settings-row" href="mailto:bonekatana@gmail.com?subject=%ED%95%9C%EC%8B%9D%EC%A1%B0%EB%A6%AC%EA%B8%B0%EB%8A%A5%EC%82%AC%20CBT%20%EB%AC%B8%EC%9D%98">문의하기<span class="s-right">›</span></a>
+      </div>
+    </div>
+    <div class="setting-section">
+      <h4>약관 및 정책</h4>
+      <div class="settings-list">
+        <a class="settings-row" href="/terms.html">이용약관<span class="s-right">›</span></a>
+        <a class="settings-row" href="/refund.html">환불정책<span class="s-right">›</span></a>
+        <a class="settings-row" href="/privacy.html">개인정보처리방침<span class="s-right">›</span></a>
+      </div>
+    </div>`;
+}
+
+/* 오답노트·즐겨찾기·풀이기록·진행중인 시험을 한 번에 지운다.
+   풀이결과 화면의 clearExamHistory()는 기록만 지우는 좁은 버전으로 그대로 둔다. */
+async function resetStudyData() {
+  if (!confirm('오답노트, 즐겨찾기, 풀이기록, 진행중인 시험을 모두 지웁니다.\n되돌릴 수 없습니다. 계속할까요?')) return;
+
+  if (isSignedIn()) {
+    const [marks, hist] = await Promise.all([
+      SB.from('user_question_marks').delete().eq('user_id', currentUser.id),
+      SB.from('user_exam_history').delete().eq('user_id', currentUser.id),
+    ]);
+    const failed = [marks, hist].find(r => r.error);
+    if (failed) { alert('삭제하지 못했습니다: ' + failed.error.message); return; }
+    ACCOUNT.marks = new Map();
+    ACCOUNT.history = [];
+    QCACHE.clear();
+  }
+  // 진행중인 시험은 로그인 여부와 상관없이 항상 기기에 있다
+  [WRONG_NOTES_KEY, STARRED_KEY, EXAM_HISTORY_KEY, EXAM_PROGRESS_KEY, EXAM_QUESTIONS_KEY]
+    .forEach(k => localStorage.removeItem(k));
+
+  alert('학습 데이터를 초기화했습니다.');
+  renderSettings();
+  renderInProgressCards();
+}
+
+/* ── 프로 버전 안내 화면 ──
+   시험 도중 잠금 카드를 눌러 들어올 수 있으므로, 돌아갈 화면을 기억해 둔다.
+   (시험 화면은 DOM에 그대로 남아 있고 타이머도 계속 도므로 그냥 되돌리면 된다) */
+let proReturnScreen = 'screen-settings';
+/* 청약철회 제한 동의는 결제 한 건에 대한 의사표시다. 화면을 새로 열 때마다 초기화한다 */
+let proAgreed = false;
+function goToPro(from) {
+  proReturnScreen = from || 'screen-settings';
+  proAgreed = false;
+  renderProScreen();
+  goTo('screen-pro');
+  refreshEntitlement(); // 결제·수동 부여가 방금 끝났을 수 있다. 바뀌면 화면을 다시 그린다
+
+  // 가격은 서버가 원본이다. 아직 못 받았으면 받아와서 다시 그린다
+  if (!PRICING) {
+    loadPricing()
+      .then(() => {
+        if (document.getElementById('screen-pro').classList.contains('active')) renderProScreen();
+      })
+      .catch(e => console.warn('가격 조회 실패:', e.message));
+  }
+}
+
+function renderProScreen() {
+  const el = document.getElementById('pro-body');
+  if (!el) return;
+
+  // 가격이 아직 안 왔으면 금액 없이 그린다. 도착하면 goToPro가 다시 그린다.
+  const off = PRICING ? Math.round((1 - PRICING.price / PRICING.listPrice) * 100) : 0;
+  const priceHtml = PRICING
+    ? `<s>${priceText(PRICING.listPrice)}</s>${priceText(PRICING.price)}<small>(${off}%↓)</small>`
+    : '<small>가격을 불러오는 중…</small>';
+
+  // 결제 개시 여부는 서버가 정한다(토스 키 유무). 가격을 아직 못 받았으면 "모르는" 상태다.
+  const checkoutReady = !!(PRICING && PRICING.checkoutEnabled);
+
+  // 결제로 넘어갈 수 있는 사람에게만 동의를 받는다.
+  // 이미 프로거나, 비로그인이거나, 결제가 아직 안 열렸으면 물어볼 것이 없다.
+  const needsAgreement = !isPro() && isSignedIn() && checkoutReady;
+  const agreeHtml = needsAgreement
+    ? `<label class="agree-row ${proAgreed ? 'checked' : ''}">
+         <input type="checkbox" id="pro-agree" ${proAgreed ? 'checked' : ''}>
+         <span>프로 전용 해설·요약노트를 열람하면 청약철회가 제한된다는 점을 확인했으며,
+           <a href="/refund.html" target="_blank" rel="noopener">환불정책</a>과
+           <a href="/terms.html" target="_blank" rel="noopener">이용약관</a>에 동의합니다. (필수)</span>
+       </label>`
+    : '';
+
+  /* 결제가 아직 안 열린 동안에도 이 화면과 약관은 배포된다.
+     그때 "로그인하고 업그레이드"를 띄우면 로그인해도 결제할 수 없어 헛걸음이 되므로,
+     결제 개시 여부를 로그인 여부보다 먼저 본다. */
+  const cta = isPro()
+    ? `<button class="btn-upgrade" disabled>✓ 이미 이용 중입니다</button>`
+    : !PRICING
+      ? `<button class="btn-upgrade" disabled>가격을 불러오는 중…</button>`
+      : !PRICING.checkoutEnabled
+        ? `<button class="btn-upgrade" disabled>결제 기능 준비 중입니다</button>`
+        : (isSignedIn()
+          ? `<button class="btn-upgrade" data-act="checkout" ${proAgreed ? '' : 'disabled'}>업그레이드 하기 (${priceText(PRICING.price)})</button>`
+          : `<button class="btn-upgrade" data-act="signin-pro">로그인하고 업그레이드</button>`);
+
+  el.innerHTML = `
+    <div class="setting-section">
+      <div class="pro-hero">
+        <div class="p-kicker">추가 결제 없이 평생 이용</div>
+        <div class="p-head">프로 버전으로 업그레이드</div>
+        <div class="p-price">${priceHtml}</div>
+      </div>
+    </div>
+    <div class="setting-section">
+      <h4>프로 버전에서 열리는 기능</h4>
+      <div class="settings-list">
+        <div class="pro-benefit">
+          <h5>보기별 상세해설</h5>
+          <p>정답만이 아니라 1~4번 보기 하나하나에 왜 맞고 왜 틀렸는지가 붙습니다. 헷갈리는 보기를 그 자리에서 정리할 수 있습니다.</p>
+          <div class="cmp">
+            <span class="free">무료 · 총평 해설</span>
+            <span class="paid">프로 · 보기 4개 전부</span>
+          </div>
+        </div>
+        <div class="pro-benefit">
+          <h5>주제별 요약노트</h5>
+          <p>문제와 연결된 암기 포인트를 정답 확인 직후에 바로 보여줍니다. 홈의 요약노트 목록에서 과목별로 몰아서 읽을 수도 있습니다.</p>
+          <div class="cmp">
+            <span class="free">무료 · 제목만</span>
+            <span class="paid">프로 · 본문 전체 열람</span>
+          </div>
+        </div>
+      </div>
+      <div class="settings-hint">문제풀이, 정답 확인, 오답노트, 즐겨찾기, 풀이결과 통계는 무료로 계속 쓸 수 있습니다.</div>
+      <div class="settings-hint">
+        추가 결제 없이 계속 이용하는 1회 결제이며, 자동으로 갱신되지 않습니다.
+        결제 후 프로 전용 해설·요약노트를 열람하면 청약철회가 제한될 수 있습니다.
+        <a href="/terms.html">이용약관</a> · <a href="/refund.html">환불정책</a> · <a href="/privacy.html">개인정보처리방침</a>
+      </div>
+      ${agreeHtml}
+    </div>
+    <div class="bottom-actions">
+      <button class="btn-back" data-act="back">←</button>
+      ${cta}
+    </div>`;
+}
+
+/* 토스 결제 SDK는 결제하려는 사람에게만 필요하다.
+   첫 화면부터 받아오면 문제만 풀다 나가는 대부분의 사용자에게 헛짐이라, 여기서 처음 부를 때 받는다. */
+let tossSdkPromise = null;
+function loadTossSdk() {
+  if (window.TossPayments) return Promise.resolve(window.TossPayments);
+  if (!tossSdkPromise) {
+    tossSdkPromise = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://js.tosspayments.com/v2/standard';
+      s.onload = () => window.TossPayments
+        ? resolve(window.TossPayments)
+        : reject(new Error('결제 모듈을 불러오지 못했습니다'));
+      s.onerror = () => reject(new Error('결제 모듈을 불러오지 못했습니다'));
+      document.head.appendChild(s);
+    }).finally(() => { tossSdkPromise = null; });
+  }
+  return tossSdkPromise;
+}
+
+let checkoutInFlight = false;
+async function startCheckout() {
+  // 버튼이 비활성이라 여기까지 오지 않아야 하지만, 동의 없이 결제가 시작되는 일은
+  // 환불정책 제3조를 어기는 것이라 한 겹 더 막는다.
+  if (!proAgreed) return;
+  if (checkoutInFlight) return; // 연타로 주문이 두 개 생기는 것을 막는다
+  if (!isSignedIn() || isPro()) return;
+  // 결제가 아직 안 열린 상태에서는 버튼 자체가 없지만, 주문 행이 생기는 일은 한 겹 더 막는다
+  if (!PRICING || !PRICING.checkoutEnabled) return;
+
+  const btn = document.querySelector('#pro-body [data-act="checkout"]');
+  const label = btn ? btn.textContent : '';
+  checkoutInFlight = true;
+  if (btn) { btn.disabled = true; btn.textContent = '결제창을 여는 중…'; }
+
+  const restore = () => {
+    checkoutInFlight = false;
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  };
+
+  try {
+    // 1) 주문 생성. 금액은 서버가 정하고 서버에 저장한다 — 여기서 금액을 보내지 않는다.
+    const res = await fetch('/api/payments/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+    });
+    const order = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(order.error || `주문을 만들지 못했습니다 (${res.status})`);
+
+    // 2) 결제창. successUrl/failUrl 은 반드시 /payment.html 이다 —
+    //    앱 첫 화면(/)은 로그인 리다이렉트의 ?code= 를 이미 쓰고 있어서
+    //    토스의 실패 코드(?code=PAY_PROCESS_CANCELED)와 겹친다.
+    const TossPayments = await loadTossSdk();
+    const payment = TossPayments(order.clientKey).payment({ customerKey: order.customerKey });
+
+    await payment.requestPayment({
+      method: 'CARD',
+      amount: { currency: 'KRW', value: order.amount },
+      orderId: order.orderId,
+      orderName: order.orderName,
+      successUrl: `${location.origin}/payment.html`,
+      failUrl: `${location.origin}/payment.html`,
+      card: { useEscrow: false, flowMode: 'DEFAULT', useCardPoint: false, useAppCardOnly: false },
+    });
+    // 여기까지 오면 화면이 이미 결제창/리다이렉트로 넘어간 뒤다. 승인은 /payment.html 이 맡는다.
+  } catch (e) {
+    // 사용자가 결제창을 닫은 경우까지 오류로 떠들지 않는다
+    if (e && (e.code === 'USER_CANCEL' || e.code === 'PAY_PROCESS_CANCELED')) { restore(); return; }
+    alert(e && e.message ? e.message : '결제를 시작하지 못했습니다.');
+    restore();
+  }
 }
 
 const PROVIDER_LABELS = { google: '구글', kakao: '카카오' };
@@ -854,34 +1497,40 @@ async function signIn(provider) {
     provider,
     options: { redirectTo: location.origin },
   });
-  if (error) renderAccountBar(`${PROVIDER_LABELS[provider]} 로그인 실패`);
+  if (error) renderSettings(`${PROVIDER_LABELS[provider]} 로그인 실패`);
 }
 async function signOut() {
   await SB.auth.signOut();
   currentUser = null;
+  IS_PRO = false;
   ACCOUNT.marks = new Map();
   ACCOUNT.history = [];
   QCACHE.clear();
-  renderAccountBar();
+  resetProContent();
+  renderSettings('');
   renderInProgressCards();
 }
 
 async function onSignedIn(user) {
   currentUser = user;
-  renderAccountBar('동기화 중…');
+  renderSettings('동기화 중…');
   let result = { moved: 0, kept: 0 };
   try {
     result = await migrateLocalData();
     await loadAccountData();
   } catch (e) {
     console.warn('계정 동기화 실패:', e.message);
-    renderAccountBar('동기화 실패 — 기기 기록은 그대로 있습니다');
+    renderSettings('동기화 실패 — 기기 기록은 그대로 있습니다');
     return;
   }
+  // 권한 조회가 실패해도 동기화 자체는 성공한 것이다 (무료로 두고 넘어간다)
+  try { await loadEntitlement(); } catch (e) { console.warn('권한 조회 실패:', e.message); }
+  resetProContent();
+
   const msg = result.kept > 0
     ? `${result.moved}건 이동, ${result.kept}건은 다음에 다시 시도합니다`
     : (result.moved > 0 ? `${result.moved}건을 계정으로 옮겼습니다` : '');
-  renderAccountBar(msg);
+  renderSettings(msg);
 }
 
 async function initAuth() {
@@ -891,14 +1540,16 @@ async function initAuth() {
     history.replaceState({}, '', location.pathname);
   }
   if (data.session) await onSignedIn(data.session.user);
-  else renderAccountBar();
+  else renderSettings('');
 
   SB.auth.onAuthStateChange((event, session) => {
     if (event === 'SIGNED_IN' && session && (!currentUser || currentUser.id !== session.user.id)) {
       onSignedIn(session.user);
     } else if (event === 'SIGNED_OUT') {
       currentUser = null;
-      renderAccountBar();
+      IS_PRO = false;
+      resetProContent();
+      renderSettings('');
     }
   });
 }
@@ -1070,7 +1721,7 @@ function renderResultsScreen() {
   const overallPct = Math.round(totalOk / totalCount * 100);
   const subjRows = Object.entries(subjTotals).map(([subj, d]) => {
     const pct = Math.round(d.ok / d.total * 100);
-    const c = SUBJ_COLOR[subj] || '#6B7280';
+    const c = subjColor(subj);
     return `<div class="subject-row">
       <div class="s-name" style="color:${c}">${esc(subj)}</div>
       <div class="s-bar"><div class="s-fill" style="width:${pct}%;background:${c}"></div></div>
@@ -1111,7 +1762,77 @@ async function clearExamHistory() {
 function goTo(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  syncTabBar(id);
   if (id === 'screen-home') renderInProgressCards();
+  window.scrollTo(0, 0);
+}
+
+/* ── 온보딩 ──
+   첫 방문에만 띄운다. 매번 3초를 강제하면 재방문자에게는 지연일 뿐이다.
+   로그인 리다이렉트로 돌아온 경우(주소에 code/토큰이 붙어 있다)에도 건너뛴다.
+   그 순간은 이미 앱을 쓰던 중이고, 온보딩이 깜빡였다 사라지기 때문이다. */
+const ONBOARDED_KEY = 'onboardingSeen';
+let onboardTimer = null;
+
+function returningFromAuth() {
+  return new URLSearchParams(location.search).has('code')
+      || location.hash.includes('access_token');
+}
+
+function maybeShowOnboarding() {
+  let seen = true;
+  try { seen = localStorage.getItem(ONBOARDED_KEY) === '1'; } catch(e) {}
+  if (seen || returningFromAuth()) return;
+  goTo('screen-onboarding');
+  onboardTimer = setTimeout(leaveOnboarding, 3000);
+}
+
+function leaveOnboarding() {
+  clearTimeout(onboardTimer);
+  onboardTimer = null;
+  try { localStorage.setItem(ONBOARDED_KEY, '1'); } catch(e) {}
+  goTo('screen-home');
+}
+
+/* ── 하단 탭 ── */
+const TAB_ITEMS = [
+  { key: 'home',     icon: ICONS.home,     label: '홈',       go: () => goTo('screen-home') },
+  { key: 'wrong',    icon: ICONS.wrong,    label: '오답노트', go: () => goToWrongNote() },
+  { key: 'star',     icon: ICONS.star,     label: '즐겨찾기', go: () => goToStarList() },
+  { key: 'results',  icon: ICONS.stats,    label: '풀이결과', go: () => goToResults() },
+  { key: 'settings', icon: ICONS.settings, label: '설정',     go: () => goToSettings() },
+];
+/* 어느 화면이 어느 탭에 속하는지 — 하위 화면도 상위 탭을 켜둔다.
+   시험 설정 화면들은 홈에서만 들어오므로 홈 탭에 묶는다 */
+const TAB_BY_SCREEN = {
+  'screen-home': 'home',
+  'screen-start': 'home',
+  'screen-gisul-start': 'home',
+  'screen-chapter-start': 'home',
+  'screen-summary-notes': 'home',
+  'screen-wrong-note': 'wrong',
+  'screen-star-list': 'star',
+  'screen-results': 'results',
+  'screen-settings': 'settings',
+  'screen-pro': 'settings',
+};
+/* 시험 화면의 하단은 .exam-nav가 이미 쓴다. 온보딩·로딩 중엔 이동시키지 않는다 */
+const TABBAR_HIDDEN = ['screen-onboarding', 'screen-exam', 'screen-loading'];
+
+function renderTabBar() {
+  document.getElementById('tab-bar').innerHTML = TAB_ITEMS.map(t =>
+    `<button class="tab-item" data-tab="${t.key}">
+       <span class="t-icon">${t.icon}</span><span class="t-label">${t.label}</span>
+     </button>`).join('');
+}
+function syncTabBar(screenId) {
+  const bar = document.getElementById('tab-bar');
+  const show = !TABBAR_HIDDEN.includes(screenId);
+  bar.classList.toggle('show', show);
+  document.querySelector('.phone-wrap').classList.toggle('has-tabbar', show);
+  const active = TAB_BY_SCREEN[screenId];
+  bar.querySelectorAll('.tab-item').forEach(el =>
+    el.classList.toggle('active', el.dataset.tab === active));
 }
 
 /* ── 설정 ── */
@@ -1198,13 +1919,7 @@ function renderWrongNoteList() {
     `;
     return;
   }
-  const items = notes.map(n => {
-    const c = SUBJ_COLOR[n.subject] || '#6B7280';
-    return `<div class="detail-card wrong-item" data-id="${esc(n.id)}">
-      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${esc(n.subject)}</div>
-      <div style="font-size:13px;font-weight:500;line-height:1.5">${esc(n.q)}</div>
-    </div>`;
-  }).join('');
+  const items = notes.map(n => listItemHtml(n, 'wrong-item')).join('');
   body.innerHTML = `
     <div class="setting-section">
       <h4>틀린 문제 (${notes.length}개)</h4>
@@ -1215,6 +1930,17 @@ function renderWrongNoteList() {
       <button class="btn-start" onclick="startWrongReview()">오답 전부 풀기 →</button>
     </div>
   `;
+}
+
+/* 오답노트·즐겨찾기 카드는 형태가 같다. 정답은 어느 쪽에도 노출하지 않는다 */
+function listItemHtml(n, cls) {
+  return `<div class="detail-card list-item ${cls}" data-id="${esc(n.id)}">
+    <div class="li-top">
+      <div class="q-subject" style="color:${subjColor(n.subject)};background:${subjBg(n.subject)}">${esc(n.subject)}</div>
+      <button class="li-remove" data-remove="${esc(n.id)}" aria-label="목록에서 삭제">${ICONS.close}</button>
+    </div>
+    <div style="font-size:15px;font-weight:600;line-height:1.6">${esc(n.q)}</div>
+  </div>`;
 }
 function beginReview(questions, mode = 'review') {
   examMode = mode;
@@ -1227,7 +1953,7 @@ function beginReview(questions, mode = 'review') {
   document.getElementById('timer').style.display = 'none';
   renderQ();
   goTo('screen-exam');
-  loadSummaryNotes();
+  loadSummaryNotesQuietly();
 }
 function startWrongReview() {
   const notes = Object.values(getWrongNotes());
@@ -1257,13 +1983,7 @@ function renderStarList() {
     `;
     return;
   }
-  const items = notes.map(n => {
-    const c = SUBJ_COLOR[n.subject] || '#6B7280';
-    return `<div class="detail-card star-item" data-id="${esc(n.id)}">
-      <div class="q-subject" style="color:${c};background:${c}18;display:inline-block;margin-bottom:8px">${esc(n.subject)}</div>
-      <div style="font-size:13px;font-weight:500;line-height:1.5">${esc(n.q)}</div>
-    </div>`;
-  }).join('');
+  const items = notes.map(n => listItemHtml(n, 'star-item')).join('');
   body.innerHTML = `
     <div class="setting-section">
       <h4>즐겨찾기한 문제 (${notes.length}개)</h4>
@@ -1286,6 +2006,144 @@ function startSingleStarReview(id) {
   beginReview([note], 'starReview');
 }
 
+/* ── 요약노트 목록 ──
+   무료도 제목·과목·키워드까지는 본다. 본문은 서버가 아예 내려주지 않으므로
+   여기서 "가리는" 것이 아니라 애초에 그릴 내용이 없다. */
+const NOTE_SUBJECTS = ['기초조리실무', '위생관리', '재료관리', '구매관리', '한식조리실무', '안전관리'];
+const summaryFilter = { subject: '', query: '' };
+let summaryNotesError = '';
+let noteSearchFocused = false;
+const openNoteIds = new Set();
+
+function goToSummaryNotes() {
+  noteSearchFocused = false; // 들어오자마자 모바일 키보드가 올라오지 않게
+  if (!summaryNotesLoaded) summaryNotesError = '';
+  goTo('screen-summary-notes');
+  renderSummaryNotesScreen();
+  // 권한 확인이 먼저다. 목록을 먼저 띄우면, 그 사이 프로로 바뀌었을 때 방금 받은
+  // 제목뿐인 목록이 "불러오기 완료"로 굳어 본문이 끝내 안 나온다.
+  refreshEntitlement().then(() => {
+    if (summaryNotesLoaded) return;
+    loadSummaryNotes()
+      .catch(e => { summaryNotesError = e.message || '요약노트를 불러오지 못했습니다'; })
+      .then(() => {
+        // 그 사이 다른 화면으로 넘어갔으면 그릴 필요가 없다
+        if (document.getElementById('screen-summary-notes').classList.contains('active')) {
+          renderSummaryNotesScreen();
+        }
+      });
+  });
+}
+
+/* 목록은 위 칩과 같은 과목 순으로 늘어놓는다. 서버는 id 순으로 주기 때문에
+   그대로 두면 과목이 뒤섞여 나온다. 표에 없는 과목은 뒤로 보낸다. */
+function subjectRank(subject) {
+  const i = NOTE_SUBJECTS.indexOf(subject);
+  return i === -1 ? NOTE_SUBJECTS.length : i;
+}
+function filteredSummaryNotes() {
+  const q = summaryFilter.query.trim().toLowerCase();
+  return SUMMARY_NOTES
+    .filter(n => {
+      if (summaryFilter.subject && n.subject !== summaryFilter.subject) return false;
+      if (!q) return true;
+      return n.title.toLowerCase().includes(q)
+          || n.keywords.some(k => String(k).toLowerCase().includes(q));
+    })
+    // 같은 과목 안에서는 서버가 준 순서(id)를 그대로 둔다 — sort는 안정 정렬이다
+    .sort((a, b) => subjectRank(a.subject) - subjectRank(b.subject));
+}
+
+function renderSummaryNotesScreen() {
+  const body = document.getElementById('summary-notes-body');
+  const backBtn = `<div class="bottom-actions"><button class="btn-back" onclick="goTo('screen-home')">←</button></div>`;
+
+  if (summaryNotesError) {
+    body.innerHTML = `
+      <div class="error-box">${esc(summaryNotesError)}</div>
+      <div class="bottom-actions">
+        <button class="btn-back" onclick="goTo('screen-home')">←</button>
+        <button class="btn-start" id="btn-retry-notes">다시 시도</button>
+      </div>`;
+    return;
+  }
+  if (!summaryNotesLoaded) {
+    body.innerHTML = `
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding:48px 0">
+        <div class="spinner"></div>
+        <p style="font-size:13.5px;color:var(--text-sub)">요약노트를 불러오는 중…</p>
+      </div>`;
+    return;
+  }
+  if (SUMMARY_NOTES.length === 0) {
+    body.innerHTML = `
+      <div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">아직 등록된 요약노트가 없습니다.</div>
+      ${backBtn}`;
+    return;
+  }
+
+  const locked = summaryNotesLocked;
+  const lockHtml = locked
+    ? `<div class="lock-card" data-act="pro">
+        <div class="l-title">${ICONS.lock} 요약노트 본문은 프로 버전</div>
+        <div class="l-sub">제목은 모두 볼 수 있습니다. 각 노트의 암기 포인트 본문은 프로 버전에서 열립니다.</div>
+        <div class="l-cta">자세히 보기 ›</div>
+      </div>`
+    : '';
+
+  const chips = ['', ...NOTE_SUBJECTS].map(s =>
+    `<button class="note-chip ${summaryFilter.subject === s ? 'selected' : ''}" data-subject="${esc(s)}">${s ? esc(s) : '전체'}</button>`
+  ).join('');
+
+  const notes = filteredSummaryNotes();
+  const list = notes.length === 0
+    ? `<div class="error-box" style="color:var(--text-sub);background:var(--bg);border-color:var(--border)">조건에 맞는 요약노트가 없습니다.</div>`
+    : `<div style="display:flex;flex-direction:column;gap:10px">${notes.map(n => noteItemHtml(n, locked)).join('')}</div>`;
+
+  body.innerHTML = `
+    ${lockHtml}
+    <div class="note-filter">${chips}</div>
+    <input class="note-search" id="note-search" type="search" placeholder="제목·키워드 검색"
+           value="${esc(summaryFilter.query)}" autocomplete="off">
+    <div class="setting-section">
+      <h4>요약노트 (${notes.length}개)</h4>
+      ${list}
+    </div>
+    ${backBtn}`;
+
+  // 검색창은 매 입력마다 다시 그리므로 커서를 원래 자리로 되돌려 놓는다
+  const input = document.getElementById('note-search');
+  input.addEventListener('input', onNoteSearchInput);
+  if (noteSearchFocused) {
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+  }
+}
+
+function noteItemHtml(n, locked) {
+  const open = !locked && openNoteIds.has(n.id);
+  const mark = locked ? ICONS.lock : ICONS.chev;
+  // bodyHtml만 유일하게 HTML로 삽입한다 (동기화 시점에 이스케이프된 값)
+  const bodyHtml = locked ? '' : `
+    <div class="note-body">
+      <div class="summary-note-card">${n.bodyHtml || '<div class="note-bullet">본문이 아직 준비되지 않았습니다.</div>'}</div>
+    </div>`;
+  return `<div class="note-item ${open ? 'open' : ''} ${locked ? 'locked' : ''}" data-id="${esc(n.id)}">
+    <div class="note-head">
+      <div class="q-subject" style="color:${subjColor(n.subject)};background:${subjBg(n.subject)}">${esc(n.subject)}</div>
+      <div class="n-title">${esc(n.title)}</div>
+      <div class="n-mark">${mark}</div>
+    </div>
+    ${bodyHtml}
+  </div>`;
+}
+
+function onNoteSearchInput(e) {
+  summaryFilter.query = e.target.value;
+  noteSearchFocused = true;
+  renderSummaryNotesScreen();
+}
+
 function retryFromResult() {
   if (examMode === 'chapter') goTo('screen-chapter-start');
   else if (examMode === 'review') { renderWrongNoteList(); goTo('screen-wrong-note'); }
@@ -1298,7 +2156,7 @@ function retryFromResult() {
 async function fetchAllQuestions(dbKeys) {
   const res = await fetch('/api/questions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({ subjects: selectedSubjects, dbKeys, count: selectedCount })
   });
   if (!res.ok) throw new Error(await errorMessage(res, '문제를 불러오지 못했습니다'));
@@ -1315,34 +2173,47 @@ async function errorMessage(res, fallback) {
   return `${fallback} (오류 ${res.status})`;
 }
 
-/* ── 요약노트 fetch (Vercel API 경유) ── */
+/* ── 요약노트 fetch (Vercel API 경유) ──
+   무료 응답에는 제목·과목·키워드만 들어 있고 본문(content_html)이 없다.
+   따라서 무료도 목록은 받아야 하며, 잠금 여부는 서버가 준 locked를 그대로 쓴다. */
 let SUMMARY_NOTES = [];
 let summaryNotesLoaded = false;
+let summaryNotesLocked = true;
 async function fetchAllSummaryNotes() {
   const res = await fetch('/api/summary-notes', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
     body: JSON.stringify({})
   });
   if (!res.ok) throw new Error(await errorMessage(res, '요약노트를 불러오지 못했습니다'));
   const data = await res.json();
-  return (data.results || []).map(parseSummaryNote);
+  return {
+    notes: (data.results || []).map(parseSummaryNote),
+    locked: data.locked !== false,
+  };
 }
-let summaryNotesLoading = false;
-async function loadSummaryNotes() {
+/* 진행 중인 요청을 붙들어 둔다. 예전에는 로딩 중이면 그냥 return 해서,
+   목록 화면처럼 "로딩이 끝나기를 기다려야 하는" 호출자가 빈손으로 돌아갔다. */
+let summaryNotesPromise = null;
+function loadSummaryNotes() {
   // 성공했을 때만 완료로 표시한다. 예전에는 실패해도 완료 처리해서
   // 네트워크가 한 번 끊기면 그 세션 내내 요약노트가 나오지 않았다.
-  if (summaryNotesLoaded || summaryNotesLoading) return;
-  summaryNotesLoading = true;
-  try {
-    SUMMARY_NOTES = await fetchAllSummaryNotes();
-    summaryNotesLoaded = true;
-    if (document.getElementById('screen-exam')?.classList.contains('active')) renderQ();
-  } catch(e) {
-    console.warn('요약노트 로드 실패, 다음에 다시 시도합니다:', e.message);
-  } finally {
-    summaryNotesLoading = false;
+  if (summaryNotesLoaded) return Promise.resolve();
+  if (!summaryNotesPromise) {
+    summaryNotesPromise = (async () => {
+      const { notes, locked } = await fetchAllSummaryNotes();
+      SUMMARY_NOTES = notes;
+      summaryNotesLocked = locked;
+      summaryNotesLoaded = true;
+      if (document.getElementById('screen-exam')?.classList.contains('active')) renderQ();
+    })().finally(() => { summaryNotesPromise = null; });
   }
+  return summaryNotesPromise;
+}
+/* 시험 화면은 요약노트가 늦게 와도 그만이다. 실패를 삼키는 쪽은 여기로 부른다 */
+function loadSummaryNotesQuietly() {
+  loadSummaryNotes().catch(e =>
+    console.warn('요약노트 로드 실패, 다음에 다시 시도합니다:', e.message));
 }
 function findNoteFor(q) {
   const qKeywords = q.keywords || [];
@@ -1437,7 +2308,7 @@ async function startExam() {
     updateTimer();
     renderQ();
     goTo('screen-exam');
-    loadSummaryNotes();
+    loadSummaryNotesQuietly();
   } catch(e) {
     if (examMode === 'chapter') {
       goTo('screen-chapter-start');
@@ -1475,7 +2346,7 @@ function resumeExam(mode) {
   updateTimer();
   renderQ();
   goTo('screen-exam');
-  loadSummaryNotes();
+  loadSummaryNotesQuietly();
 }
 const PROGRESS_MODE_LABELS = { mock: 'CBT 기출예상문제', gisul: '기출문제', chapter: '단원별 연습' };
 function progressLabel(snap) {
@@ -1556,18 +2427,26 @@ function renderQ() {
     btnNext.onclick = nextQ;
   }
 
-  const sc = SUBJ_COLOR[q.subject] || '#6B7280';
-  const dc = DIFF_COLOR[q.difficulty] || '#6B7280';
+  document.getElementById('q-progress-cur').textContent = currentQ + 1;
+  document.getElementById('q-progress-total').textContent = `/${total}`;
+
+  const sc = subjColor(q.subject);
+  const dc = DIFF_COLOR[q.difficulty] || SUBJ_FALLBACK;
+
+  // 보기별 상세해설은 프로 전용이다. 무료 사용자는 서버가 해설 필드를 아예 주지 않으므로
+  // 보기마다 "준비되지 않았습니다"를 반복하지 않고, 아래에 잠금 카드 하나만 띄운다.
+  const showOptExps = rev && isPro();
 
   const optsHtml = q.opts.map((o, i) => {
     let cls = 'option-item'; let icon = ''; let state = 'neutral';
     if (rev) {
       if (i === q.answer)        { cls += ' correct'; icon = '<span class="opt-icon">✓</span>'; state = 'correct'; }
-      else if (i === sel)        { cls += ' wrong';   icon = '<span class="opt-icon">✗</span>'; state = 'wrong'; }
-      cls += ' has-explain';
+      else if (i === sel)        { cls += ' wrong';   icon = '<span class="opt-icon">✕</span>'; state = 'wrong'; }
+      else                       { cls += ' idle'; }
+      if (showOptExps) cls += ' has-explain';
     } else if (i === sel)        { cls += ' selected'; }
 
-    const explainHtml = rev
+    const explainHtml = showOptExps
       ? `<div class="opt-explain ${state}">${esc((q.optExps && q.optExps[i]) || '이 보기에 대한 해설이 아직 준비되지 않았습니다.')}</div>`
       : '';
 
@@ -1582,24 +2461,35 @@ function renderQ() {
   const checkBtn = (sel !== null && !rev)
     ? `<button class="check-btn" onclick="revealAnswer()">정답 확인하기</button>` : '';
 
-  const note = rev ? findNoteFor(q) : null;
+  // 본문이 없는 노트(무료 응답의 제목뿐인 행)는 빈 카드가 되므로 그리지 않는다.
+  // 클라이언트는 프로라고 믿는데 서버가 잠근 경우 — 토큰 만료 등 — 가 여기 걸린다.
+  const note = rev && isPro() && !summaryNotesLocked ? findNoteFor(q) : null;
   // bodyHtml만 유일하게 HTML로 삽입한다 (동기화 시점에 이스케이프된 값)
   const noteHtml = note
     ? `<div class="summary-note-card">
-        <div class="note-title">📝 ${esc(note.title)}</div>
+        <div class="note-title">${esc(note.title)}</div>
         ${note.bodyHtml}
       </div>`
     : '';
 
+  const lockHtml = (rev && !isPro())
+    ? `<div class="lock-card" data-act="pro">
+        <div class="l-title">${ICONS.lock} 보기별 상세해설 · 주제별 요약노트</div>
+        <div class="l-sub">보기 1~4번의 개별 해설과 이 문제의 요약노트는 프로 버전에서 열립니다.</div>
+        <div class="l-cta">자세히 보기 ›</div>
+      </div>`
+    : '';
+
+  const starred = isStarred(q.id);
   document.getElementById('exam-body').innerHTML = `
     <div class="question-card">
       <div class="q-meta">
         <div class="q-num">${currentQ+1}</div>
-        <div class="q-subject" style="color:${sc};background:${sc}18">${esc(q.subject)}</div>
+        <div class="q-subject" style="color:${sc};background:${subjBg(q.subject)}">${esc(q.subject)}</div>
         <div class="q-diff" style="color:${dc}">난이도 ${esc(q.difficulty)}</div>
         <div style="margin-left:auto;display:flex;gap:6px;">
-          <div class="star-btn ${isStarred(q.id) ? 'active' : ''}" onclick="toggleStar()">${isStarred(q.id) ? '⭐' : '☆'}</div>
-          <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()">${flagged[currentQ] ? '🚩' : '🏳️'}</div>
+          <div class="star-btn ${starred ? 'active' : ''}" onclick="toggleStar()" title="즐겨찾기">${starIcon(starred)}</div>
+          <div class="flag-btn ${flagged[currentQ] ? 'active' : ''}" onclick="toggleFlag()" title="문제 체크">${flagIcon(flagged[currentQ])}</div>
         </div>
       </div>
       <div class="question-text">${esc(q.q)}</div>
@@ -1607,10 +2497,11 @@ function renderQ() {
     <div class="options-list">${optsHtml}</div>
     ${checkBtn}
     <div class="explanation-card ${rev ? 'show' : ''}">
-      <div class="ex-title">📌 해설</div>
+      <div class="ex-title">해설</div>
       <div class="ex-text">${esc(q.exp || '해설이 없습니다.')}</div>
     </div>
     ${noteHtml}
+    ${lockHtml}
   `;
   updateQStrip();
 }
@@ -1699,7 +2590,7 @@ function finishExam() {
     addExamHistory({ mode: examMode, correct, total: QUESTIONS.length, score, pass, subjMap, finishedAt: Date.now() });
   }
 
-  document.getElementById('result-emoji').textContent = isReviewUI ? '📚' : (pass ? '🎉' : '😔');
+  document.getElementById('result-mark').innerHTML = isReviewUI ? ICONS.book : (pass ? ICONS.pass : ICONS.fail);
   document.getElementById('result-title').textContent = isReviewUI
     ? '복습 완료!'
     : (pass ? '합격을 축하합니다!' : '아쉽지만 불합격입니다');
@@ -1718,7 +2609,7 @@ function finishExam() {
 
   document.getElementById('subject-bars').innerHTML = Object.entries(subjMap).map(([sub,d])=>{
     const pct = Math.round(d.ok/d.total*100);
-    const c = SUBJ_COLOR[sub]||'#6B7280';
+    const c = subjColor(sub);
     return `<div class="subject-row">
       <div class="s-name" style="color:${c}">${esc(sub)}</div>
       <div class="s-bar"><div class="s-fill" style="width:${pct}%;background:${c}"></div></div>
@@ -1735,16 +2626,85 @@ function finishExam() {
 function delegate(containerId, selector, handler) {
   document.getElementById(containerId).addEventListener('click', (e) => {
     const el = e.target.closest(selector);
-    if (el) handler(el);
+    if (el) handler(el, e);
   });
 }
-delegate('wrong-note-body', '.wrong-item', el => startSingleWrongReview(el.dataset.id));
-delegate('star-list-body',  '.star-item',  el => startSingleStarReview(el.dataset.id));
+/* 삭제 버튼은 카드 안에 있으므로, 카드 클릭(재풀이 시작)과 겹치지 않게 걸러낸다 */
+delegate('wrong-note-body', '.wrong-item', (el, e) => {
+  if (e.target.closest('.li-remove')) return;
+  startSingleWrongReview(el.dataset.id);
+});
+delegate('star-list-body',  '.star-item',  (el, e) => {
+  if (e.target.closest('.li-remove')) return;
+  startSingleStarReview(el.dataset.id);
+});
+/* data-* 는 항상 문자열이지만 문항 id는 숫자일 수 있다.
+   계정 저장소는 id 타입까지 맞아야 지워지므로 원본 값을 찾아 넘긴다 */
+delegate('wrong-note-body', '.li-remove', el => {
+  const note = getWrongNotes()[el.dataset.remove];
+  removeWrongNote(note ? note.id : el.dataset.remove);
+  renderWrongNoteList();
+});
+delegate('star-list-body', '.li-remove', el => {
+  const note = getStarred()[el.dataset.remove];
+  removeStarred(note ? note.id : el.dataset.remove);
+  renderStarList();
+});
 delegate('home-progress',   '.progress-card', el => resumeExam(el.dataset.mode));
-delegate('account-bar',     '.acct-btn', el => (el.dataset.act === 'signin' ? signIn(el.dataset.provider) : signOut()));
 delegate('results-body',    '#btn-clear-history', () => clearExamHistory());
+delegate('tab-bar',         '.tab-item', el => {
+  const tab = TAB_ITEMS.find(t => t.key === el.dataset.tab);
+  if (tab) tab.go();
+});
+delegate('settings-body', '[data-act]', el => {
+  const act = el.dataset.act;
+  if (act === 'signin') signIn(el.dataset.provider);
+  else if (act === 'signout') signOut();
+  else if (act === 'pro') goToPro('screen-settings');
+  else if (act === 'reset') resetStudyData();
+});
+delegate('pro-body', '[data-act]', el => {
+  const act = el.dataset.act;
+  if (act === 'signin-pro') signIn('google');
+  else if (act === 'checkout') startCheckout();
+  else if (act === 'back') {
+    if (proReturnScreen === 'screen-settings') goToSettings();
+    else goTo(proReturnScreen);
+  }
+});
+/* 라벨 안쪽을 눌러도 브라우저가 체크박스로 클릭을 넘겨주므로, 체크박스 하나만 듣는다.
+   (.agree-row 전체를 들으면 라벨 클릭과 전달된 클릭이 겹쳐 두 번 토글된다) */
+delegate('pro-body', '#pro-agree', el => {
+  proAgreed = el.checked;
+  renderProScreen(); // 결제 버튼의 활성 여부가 이 값에 걸려 있다
+});
+delegate('exam-body', '.lock-card', () => goToPro('screen-exam'));
+delegate('summary-notes-body', '.lock-card', () => goToPro('screen-summary-notes'));
+delegate('summary-notes-body', '#btn-retry-notes', () => goToSummaryNotes());
+delegate('summary-notes-body', '.note-chip', el => {
+  summaryFilter.subject = el.dataset.subject;
+  noteSearchFocused = false;
+  renderSummaryNotesScreen();
+});
+delegate('summary-notes-body', '.note-head', el => {
+  const item = el.closest('.note-item');
+  // 잠긴 노트는 펼치는 대신 구매 안내로 보낸다
+  if (item.classList.contains('locked')) { goToPro('screen-summary-notes'); return; }
+  const id = item.dataset.id;
+  if (openNoteIds.has(id)) openNoteIds.delete(id); else openNoteIds.add(id);
+  item.classList.toggle('open');
+});
 
+renderTabBar();
+syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
+syncHomeProBadge();        // 권한 조회 전에는 무료로 본다
+maybeShowOnboarding();     // 첫 방문이면 온보딩으로 덮는다
 initAuth();
+
+/* 설정 화면의 금액 표시를 위해 미리 받아 둔다. 실패해도 화면은 금액 없이 그려진다 */
+loadPricing()
+  .then(() => renderSettings())
+  .catch(e => console.warn('가격 조회 실패:', e.message));
 
 /* 홈의 총 문항 수는 실제 DB 값을 쓴다 (예전엔 "300+"로 고정돼 있었다) */
 (async () => {
