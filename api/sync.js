@@ -1,17 +1,9 @@
 import { runSync } from './_sync-core.js';
-
-/* 길이가 달라도 비교 시간이 노출되지 않도록 상수 시간 비교 */
-function safeEqual(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string' || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
-}
+import { safeEqual, isAdminRequest } from './_admin.js';
 
 function isAuthorized(req) {
   // 관리자 페이지 버튼: x-sync-token 헤더
-  const token = process.env.SYNC_TOKEN;
-  if (token && safeEqual(req.headers['x-sync-token'], token)) return true;
+  if (isAdminRequest(req)) return true;
 
   // Vercel Cron: Authorization: Bearer <CRON_SECRET>
   const cronSecret = process.env.CRON_SECRET;

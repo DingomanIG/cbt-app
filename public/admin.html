@@ -28,11 +28,16 @@
   .section { margin-bottom: 20px; }
   .section h4 { font-size: 12px; font-weight: 700; color: var(--text-sub); letter-spacing: .4px; margin-bottom: 10px; }
 
-  input[type=password] {
+  input[type=password], input[type=text] {
     width: 100%; padding: 15px; border: 2px solid var(--border); border-radius: 12px;
     background: var(--card); font-size: 15px; font-family: inherit; color: var(--text);
   }
-  input[type=password]:focus { outline: none; border-color: var(--primary); }
+  input[type=password]:focus, input[type=text]:focus { outline: none; border-color: var(--primary); }
+  /* 주문번호는 cbt_ + hex 32자라 사람이 눈으로 대조해야 한다 */
+  input#cancel-order { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+
+  button.danger { background: var(--wrong); }
+  hr.divide { border: none; border-top: 1px solid var(--border); margin: 28px 0 22px; }
 
   button {
     width: 100%; padding: 18px; border: none; border-radius: 16px;
@@ -88,6 +93,23 @@
 
     <div id="result" class="section hidden"></div>
 
+    <!-- 환불 (결제 취소) -->
+    <div id="refund-section" class="section hidden">
+      <hr class="divide">
+      <h4>결제 취소 (환불)</h4>
+      <input type="text" id="cancel-order" placeholder="주문번호 (cbt_...)" autocomplete="off" spellcheck="false">
+      <div style="margin-top:8px">
+        <input type="text" id="cancel-reason" placeholder="취소 사유 (선택)" autocomplete="off">
+      </div>
+      <div style="margin-top:12px">
+        <button class="secondary" id="lookup-btn" onclick="lookupOrder()">주문 조회</button>
+      </div>
+      <div class="muted" style="margin-top:8px">
+        먼저 조회해서 금액과 상태를 확인한 뒤에 취소할 수 있습니다. 취소는 되돌릴 수 없습니다.
+      </div>
+      <div id="cancel-result" class="hidden" style="margin-top:12px"></div>
+    </div>
+
     <div class="section" id="footer-section" style="margin-top:28px">
       <button class="secondary" onclick="clearToken()">비밀번호 지우기</button>
       <div style="margin-top:8px"><button class="secondary" onclick="location.href='/'">앱으로 돌아가기</button></div>
@@ -107,6 +129,7 @@ function render() {
   const hasToken = !!getToken();
   $('auth-section').classList.toggle('hidden', hasToken);
   $('sync-section').classList.toggle('hidden', !hasToken);
+  $('refund-section').classList.toggle('hidden', !hasToken);
   if (hasToken) showLastSync();
 }
 
@@ -177,6 +200,96 @@ async function runSync() {
   } finally {
     btn.disabled = false;
     btn.textContent = '지금 동기화';
+  }
+}
+
+/* ── 결제 취소 ──
+   두 단계로 나눈 이유: 주문번호는 손으로 옮겨 적는 값이고, 한 글자 틀리면
+   엉뚱한 사람의 결제를 취소한다. 취소는 되돌릴 수 없다.
+   그래서 조회로 금액·상태를 눈으로 확인한 뒤에만 취소 버튼이 나타난다. */
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c =>
+  ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+const STATUS_LABEL = {
+  ready: '결제창까지 가지 않은 주문', approved: '승인 완료',
+  canceled: '취소됨', failed: '승인 거절',
+};
+
+async function callCancelApi(payload) {
+  const res = await fetch('/api/payments/cancel', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-sync-token': getToken() },
+    body: JSON.stringify(payload),
+  });
+  let data;
+  try { data = await res.json(); }
+  catch { throw new Error(`서버 응답을 읽지 못했습니다 (HTTP ${res.status})`); }
+  if (!res.ok) {
+    if (res.status === 401) { localStorage.removeItem(TOKEN_KEY); render(); }
+    throw new Error(data.error || `실패 (HTTP ${res.status})`);
+  }
+  return data;
+}
+
+function showCancelBox(html) {
+  $('cancel-result').className = '';
+  $('cancel-result').innerHTML = html;
+}
+
+async function lookupOrder() {
+  const orderId = $('cancel-order').value.trim();
+  if (!orderId) return;
+  const btn = $('lookup-btn');
+  btn.disabled = true;
+  btn.textContent = '조회 중…';
+  try {
+    const { order } = await callCancelApi({ orderId, dryRun: true });
+    const when = order.approved_at || order.created_at;
+    const cancellable = order.status === 'approved';
+    showCancelBox(`
+      <div class="card">
+        <div class="row"><span>주문번호</span><b style="font-size:11px">${esc(order.order_id)}</b></div>
+        <div class="row"><span>금액</span><b>${order.amount.toLocaleString()}원</b></div>
+        <div class="row"><span>상태</span><b>${esc(STATUS_LABEL[order.status] || order.status)}</b></div>
+        <div class="row"><span>결제수단</span><b>${esc(order.method || '-')}</b></div>
+        <div class="row"><span>일시</span><b>${when ? new Date(when).toLocaleString('ko-KR') : '-'}</b></div>
+        ${order.cancel_reason ? `<div class="row"><span>취소사유</span><b>${esc(order.cancel_reason)}</b></div>` : ''}
+      </div>
+      ${cancellable
+        ? `<div style="margin-top:10px">
+             <button class="danger" id="cancel-btn" onclick="doCancel('${esc(order.order_id)}', ${order.amount})">
+               ${order.amount.toLocaleString()}원 취소하기
+             </button>
+           </div>`
+        : `<div class="muted" style="margin-top:10px">취소할 수 있는 상태가 아닙니다.</div>`}`);
+  } catch (e) {
+    showCancelBox(`<div class="card err">⚠️ ${esc(e.message)}</div>`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '주문 조회';
+  }
+}
+
+async function doCancel(orderId, amount) {
+  // 되돌릴 수 없는 동작이라 마지막으로 한 번 더 묻는다
+  if (!confirm(`${amount.toLocaleString()}원을 환불하고 프로 권한을 회수합니다.\n\n주문번호: ${orderId}\n\n되돌릴 수 없습니다. 진행할까요?`)) return;
+
+  const btn = $('cancel-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>취소 중…';
+  try {
+    const data = await callCancelApi({ orderId, reason: $('cancel-reason').value.trim() });
+    showCancelBox(data.noop
+      ? `<div class="card">${esc(data.noop)}</div>`
+      : `<div class="card ok">
+           <div style="font-weight:700;margin-bottom:8px">✓ 환불 완료</div>
+           <div class="row"><span>취소 금액</span><b>${(data.canceledAmount ?? amount).toLocaleString()}원</b></div>
+           <div class="row"><span>토스 상태</span><b>${esc(data.tossStatus || '-')}</b></div>
+           <div class="row"><span>사유</span><b>${esc(data.reason || '-')}</b></div>
+           <div class="muted" style="margin-top:8px;color:#14532D">프로 권한이 회수되었습니다. 카드사 취소 반영까지 3~5영업일이 걸릴 수 있습니다.</div>
+         </div>`);
+  } catch (e) {
+    showCancelBox(`<div class="card err">⚠️ ${esc(e.message)}</div>`);
   }
 }
 
