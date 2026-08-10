@@ -1,0 +1,11 @@
+# 검색엔진 수집 규칙.
+# ⚠️ 커스텀 도메인을 사면 아래 Sitemap 줄의 주소를 함께 고칠 것.
+
+User-agent: *
+Allow: /
+
+# 관리자 화면과 API는 수집 대상이 아니다.
+Disallow: /admin.html
+Disallow: /api/
+
+Sitemap: https://cbt-app-liart.vercel.app/sitemap.xml
