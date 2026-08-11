@@ -1815,6 +1815,42 @@ function goTo(id) {
   window.scrollTo(0, 0);
 }
 
+/* ── 약관·정책에서 돌아오기 ──
+   이 문서들은 별도 HTML이라 링크를 누르면 앱을 통째로 벗어난다. 돌아올 때 주소는
+   `/` 뿐이고 앱은 어느 화면이었는지 알 방법이 없어서, 설정에서 들어갔는데도 홈으로
+   떨어졌다. 나갈 때 화면을 적어두고 부팅할 때 되돌린다.
+
+   문서 쪽 "← 앱으로 돌아가기"는 legal.js 가 history.back() 으로 처리하므로 새로고침이
+   없고 이 값도 쓰이지 않는다. 여기가 필요한 건 **브라우저 뒤로가기**로 돌아온 경우다. */
+const RETURN_SCREEN_KEY = 'returnScreen';
+const LEGAL_PATHS = /^\/(terms|refund|privacy)\.html$/;
+
+document.addEventListener('click', (e) => {
+  const a = e.target.closest('a[href]');
+  if (!a || a.target === '_blank') return;   // 새 탭은 앱이 그대로 남으므로 기록할 것이 없다
+  let path;
+  try { path = new URL(a.href, location.href).pathname; } catch (err) { return; }
+  if (!LEGAL_PATHS.test(path)) return;
+
+  const active = document.querySelector('.screen.active');
+  // 지금은 설정에서만 같은 탭으로 넘어간다. 다른 화면이 생기면 여기 늘릴 것
+  if (active && active.id === 'screen-settings') {
+    try { sessionStorage.setItem(RETURN_SCREEN_KEY, active.id); } catch (err) {}
+  }
+});
+
+/* 한 번만 쓰고 지운다 — 나중에 주소창으로 다시 들어왔을 때 엉뚱하게 설정이 열리면 안 된다 */
+function restoreReturnScreen() {
+  let id = null;
+  try {
+    id = sessionStorage.getItem(RETURN_SCREEN_KEY);
+    sessionStorage.removeItem(RETURN_SCREEN_KEY);
+  } catch (e) {}
+  if (id !== 'screen-settings') return false;
+  goToSettings();
+  return true;
+}
+
 /* ── 온보딩 ──
    첫 방문에만 띄운다. 매번 3초를 강제하면 재방문자에게는 지연일 뿐이다.
    로그인 리다이렉트로 돌아온 경우(주소에 code/토큰이 붙어 있다)에도 건너뛴다.
@@ -2746,7 +2782,8 @@ delegate('summary-notes-body', '.note-head', el => {
 renderTabBar();
 syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
 syncHomeProBadge();        // 권한 조회 전에는 무료로 본다
-maybeShowOnboarding();     // 첫 방문이면 온보딩으로 덮는다
+// 약관에서 브라우저 뒤로가기로 돌아왔다면 설정으로. 그 경우 온보딩은 띄우지 않는다
+if (!restoreReturnScreen()) maybeShowOnboarding();
 initAuth();
 
 /* 설정 화면의 금액 표시를 위해 미리 받아 둔다. 실패해도 화면은 금액 없이 그려진다 */
