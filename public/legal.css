@@ -1,6 +1,7 @@
 /* 약관·환불정책·개인정보처리방침 공용 스타일.
-   앱(index.html)과 달리 긴 글을 읽는 문서 페이지라 폰 프레임을 쓰지 않고
-   넓은 화면에서는 본문 폭만 제한한다. 팔레트는 앱과 같은 값을 쓴다. */
+   이 문서들은 앱 설정 화면에서 링크로 들어온다. 앱은 390px 폰 프레임인데
+   문서만 넓게 퍼지면 다른 사이트로 넘어온 것처럼 보이므로 폭을 앱과 맞춘다.
+   팔레트도 앱과 같은 값을 쓴다. */
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
@@ -29,7 +30,7 @@ body {
 }
 
 .doc {
-  max-width: 720px;
+  max-width: 390px;   /* index.html 의 .phone-wrap 과 같은 값 — 함께 고칠 것 */
   margin: 0 auto;
   background: var(--bg);
   min-height: 100vh;
@@ -83,24 +84,45 @@ body {
 }
 .note strong { color: var(--accent-text); }
 
-/* ── 표 (위탁·국외이전) ── */
-.table-wrap { overflow-x: auto; margin: 12px 0; }
+/* ── 표 (수집항목·보유기간·위탁·국외이전) ──
+   본문 폭이 앱 프레임(390px)이라 어떤 화면에서도 표를 가로로 펼칠 자리가 없다.
+   가로 스크롤로 두면 열이 잘린 채 보이고 밀 수 있다는 것도 눈에 안 띈다.
+   그래서 행을 카드처럼 세로로 쌓고, 각 칸 앞에 헤더를 붙인다.
+   ⚠️ 칸마다 `data-label="열 이름"` 이 있어야 한다 — 표에 행·열을 추가하면 같이 넣을 것.
+   국외이전 표처럼 5열짜리도 이 방식이라야 읽힌다. */
+.table-wrap { margin: 14px 0; }
 table {
   width: 100%;
-  min-width: 460px;
   border-collapse: collapse;
   font-size: 13.5px;
-  background: var(--card);
-  border-radius: 10px;
-  overflow: hidden;
 }
-th, td {
+/* 헤더 행 — 각 칸의 data-label 이 대신하므로 감춘다 */
+table tr:first-child { display: none; }
+table tr {
+  display: block;
+  background: var(--card);
   border: 1px solid var(--border);
-  padding: 9px 11px;
-  text-align: left;
+  border-radius: 10px;
+  padding: 2px 13px;
+  margin-bottom: 8px;
+}
+table td {
+  display: block;
+  border: 0;
+  padding: 9px 0;
   vertical-align: top;
 }
-th { background: var(--neutral-bg); font-weight: 700; }
+table td + td { border-top: 1px dashed var(--border); }
+table td::before {
+  content: attr(data-label);
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--text-sub);
+  margin-bottom: 3px;
+}
+/* 라벨이 없는 칸(추가하다 빠뜨린 경우)에는 빈 줄을 만들지 않는다 */
+table td:not([data-label])::before { display: none; }
 
 /* ── 아직 채우지 않은 사업자 정보 ──
    배포 전에 반드시 실제 값으로 바꿔야 한다. 눈에 띄게 남겨 두어
