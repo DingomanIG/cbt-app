@@ -2,9 +2,14 @@ import { createClient } from '@supabase/supabase-js';
 
 const TABLES = ['questions_mock', 'questions_gisul_yesang', 'questions_gisul'];
 
-export default async function handler(req, res) {
-  // 자주 바뀌지 않는 값이라 CDN에 맡긴다
+/* 실패한 응답까지 CDN에 1시간 박히면 홈 화면 총 문항이 그동안 "300+"로 뜬다.
+   성공했을 때만 캐시를 허용하고, 그 전까지는 캐시하지 않는다. */
+function cacheable(res) {
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+}
+
+export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store');
 
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
@@ -26,6 +31,7 @@ export default async function handler(req, res) {
     const failed = counts.find((c) => c.error);
     if (failed) return res.status(500).json({ error: failed.error.message });
 
+    cacheable(res);   // 여기까지 왔을 때만 — 자주 바뀌지 않는 값이라 CDN에 맡긴다
     return res.status(200).json({
       questionCount: counts.reduce((sum, c) => sum + (c.count || 0), 0),
     });

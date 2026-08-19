@@ -1438,6 +1438,7 @@ let proAgreed = false;
 function goToPro(from) {
   proReturnScreen = from || 'screen-settings';
   proAgreed = false;
+  track('view_pro', { from: from || 'screen-settings' });   // 결제 의사의 대리 지표
   renderProScreen();
   goTo('screen-pro');
   refreshEntitlement(); // 결제·수동 부여가 방금 끝났을 수 있다. 바뀌면 화면을 다시 그린다
@@ -1563,6 +1564,8 @@ async function startCheckout() {
   if (!isSignedIn() || isPro()) return;
   // 결제가 아직 안 열린 상태에서는 버튼 자체가 없지만, 주문 행이 생기는 일은 한 겹 더 막는다
   if (!PRICING || !PRICING.checkoutEnabled) return;
+
+  track('begin_checkout', { value: PRICING.price, currency: 'KRW' });
 
   const btn = document.querySelector('#pro-body [data-act="checkout"]');
   const label = btn ? btn.textContent : '';
@@ -1882,6 +1885,36 @@ function goTo(id) {
   syncTabBar(id);
   if (id === 'screen-home') renderInProgressCards();
   window.scrollTo(0, 0);
+}
+
+/* ── 방문 분석 (Google Analytics 4) ──
+   무료 출시의 목적은 "반응을 보는 것"인데, 그러려면 재는 수단이 있어야 한다.
+   특히 결제가 잠긴 동안에도 **프로 화면에 몇 명이 오는가**를 세어두면
+   결제를 열 때 전환율을 미리 가늠할 수 있다 (손익분기 86건).
+
+   ⚠️ 측정 ID가 비어 있으면 스크립트를 아예 내려받지 않는다 — 아무것도 하지 않는
+      추적 코드를 모든 방문자에게 밀어넣을 이유가 없다.
+   ⚠️ 켜기 전에 개인정보처리방침(제5·6조, 쿠키 조항)이 먼저 반영돼 있어야 한다.
+      수집을 시작한 뒤에 방침을 고치는 순서가 되면 안 된다. */
+const GA_ID = '';   // TODO: GA4 측정 ID (G-XXXXXXXXXX). 넣는 순간 수집이 시작된다
+
+function initAnalytics() {
+  if (!GA_ID) return;
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + encodeURIComponent(GA_ID);
+  document.head.appendChild(s);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { window.dataLayer.push(arguments); };
+  gtag('js', new Date());
+  // IP 익명화는 GA4 기본값이지만, 광고 개인화는 우리가 쓸 일이 없으므로 끈다
+  gtag('config', GA_ID, { allow_google_signals: false, allow_ad_personalization_signals: false });
+}
+
+/* 결제가 잠긴 동안의 핵심 지표. 이름을 바꾸면 과거 데이터와 이어지지 않으니 그대로 둘 것 */
+function track(name, params) {
+  if (!GA_ID || typeof window.gtag !== 'function') return;
+  try { window.gtag('event', name, params || {}); } catch (e) {}
 }
 
 /* ── 약관·정책에서 돌아오기 ──
@@ -2848,6 +2881,7 @@ delegate('summary-notes-body', '.note-head', el => {
   item.classList.toggle('open');
 });
 
+initAnalytics();
 document.getElementById('home-biz').innerHTML = bizInfoHtml();
 renderTabBar();
 syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
