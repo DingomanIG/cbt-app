@@ -531,6 +531,25 @@
   .settings-row.danger { color: var(--wrong); }
   .settings-row.static { cursor: default; }
   .settings-hint { font-size: 12px; color: var(--text-sub); line-height: 1.6; padding: 8px 4px 0; }
+
+  /* 사업자 정보 — 법정 표기라 눈에 띄게 둘 필요는 없지만 찾으면 바로 나와야 한다 */
+  .biz { background: var(--card); border: 1px solid var(--border); border-radius: 14px; }
+  .biz summary {
+    list-style: none; cursor: pointer;
+    padding: 14px 16px; font-size: 13px; font-weight: 700; color: var(--text-sub);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .biz summary::-webkit-details-marker { display: none; }
+  .biz summary .s-right { transition: transform .15s; }
+  .biz[open] summary .s-right { transform: rotate(90deg); }
+  .biz dl {
+    margin: 0; padding: 2px 16px 14px;
+    display: grid; grid-template-columns: 92px 1fr; gap: 6px 10px;
+    font-size: 12px; line-height: 1.6;
+  }
+  .biz dt { color: var(--text-sub); }
+  .biz dd { margin: 0; color: var(--text); word-break: keep-all; }
+  .biz-note { margin: 0; padding: 0 16px 14px; font-size: 11.5px; color: var(--text-sub); line-height: 1.6; }
   .settings-hint a { color: var(--accent-text); font-weight: 700; text-decoration: none; }
 
   /* ── 프로 버전 ── */
@@ -705,6 +724,10 @@
         <div class="arrow"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></div>
       </div>
     </div>
+    <!-- 사업자 정보 — 전자상거래법 표시 의무이자 PG 심사 요건("홈페이지 하단").
+         설정 화면에도 같은 블록이 있지만, 심사자와 사용자가 먼저 닿는 곳은 첫 화면이다.
+         내용은 JS(bizInfoHtml)가 한 곳에서 만들어 양쪽에 같은 값을 넣는다. -->
+    <div id="home-biz"></div>
   </div>
 
   <!-- 설정 (하단 탭) -->
@@ -1272,6 +1295,51 @@ let syncMessage = '';
 
 function goToSettings() { renderSettings(); goTo('screen-settings'); refreshEntitlement(); }
 
+/* ── 사업자 정보 ──
+   전자상거래법상 표시 의무이고, 토스페이먼츠 계약 심사도 "홈페이지 하단에 사업자정보를
+   기재하고 사업자등록증 상 정보와 완전히 일치할 것"을 요구한다.
+
+   ⚠️ 값은 사업자등록증·통신판매업 신고증과 **글자 단위로 같아야 한다.** 다르면 심사에서
+      보완 요청이 온다. 약관 3종(terms/refund/privacy)에도 같은 값이 적혀 있으므로
+      하나가 바뀌면 네 군데를 함께 고칠 것.
+
+   접어둔 이유: 설정 화면의 주인공은 계정·데이터·약관이고 이 블록은 법정 표기다.
+   기본으로 펼쳐두면 화면을 잡아먹지만, 찾는 사람(과 심사자)은 한 번에 열 수 있어야 한다. */
+const BIZ = {
+  상호: '희영소프트',
+  대표자: '양동언',
+  사업자등록번호: '223-32-01942',
+  통신판매업: '제2026-충북옥천-0072호',
+  주소: '충청북도 옥천군 옥천읍 동부로 140-23, 101동 307호(옥천그린빌)',
+  전화: '',                       // TODO: 0505/070 번호 발급 후 채울 것 (토스 요구 항목)
+  이메일: 'bonekatana@gmail.com',
+};
+
+function bizInfoHtml() {
+  const rows = [
+    ['상호', BIZ.상호],
+    ['대표자', BIZ.대표자],
+    ['사업자등록번호', BIZ.사업자등록번호],
+    ['통신판매업 신고번호', BIZ.통신판매업],
+    ['사업장 주소', BIZ.주소],
+    // 번호를 받기 전까지는 줄 자체를 내보내지 않는다 — 빈 칸이 보이는 편이 더 나쁘다
+    ...(BIZ.전화 ? [['전화', BIZ.전화]] : []),
+    ['이메일', BIZ.이메일],
+  ];
+  return `
+    <div class="setting-section">
+      <details class="biz">
+        <summary>사업자 정보<span class="s-right">›</span></summary>
+        <dl>
+          ${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}
+        </dl>
+        <p class="biz-note">
+          본 서비스는 시험 시행기관과 관련이 없는 민간 학습 서비스입니다.
+        </p>
+      </details>
+    </div>`;
+}
+
 function renderSettings(msg) {
   if (msg !== undefined) syncMessage = msg;
   const el = document.getElementById('settings-body');
@@ -1332,7 +1400,8 @@ function renderSettings(msg) {
         <a class="settings-row" href="/refund.html">환불정책<span class="s-right">›</span></a>
         <a class="settings-row" href="/privacy.html">개인정보처리방침<span class="s-right">›</span></a>
       </div>
-    </div>`;
+    </div>
+    ${bizInfoHtml()}`;
 }
 
 /* 오답노트·즐겨찾기·풀이기록·진행중인 시험을 한 번에 지운다.
@@ -2779,6 +2848,7 @@ delegate('summary-notes-body', '.note-head', el => {
   item.classList.toggle('open');
 });
 
+document.getElementById('home-biz').innerHTML = bizInfoHtml();
 renderTabBar();
 syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
 syncHomeProBadge();        // 권한 조회 전에는 무료로 본다
