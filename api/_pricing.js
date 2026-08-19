@@ -5,8 +5,11 @@
  * /api/pricing 을 거쳐 이 값을 받아가므로, 가격을 바꿀 때 고칠 곳은 여기 한 군데다.
  */
 
-export const PRO_PRICE = 5500;       // 실제 결제 금액
-export const PRO_LIST_PRICE = 8900;  // 정가 (할인 표시용, 결제에는 쓰지 않는다)
+/* 출시 기념가. 기념 기간이 끝나면 PRO_PRICE 를 PRO_LIST_PRICE 로 올린다.
+   ⚠️ 정가는 "앞으로 실제로 받을 가격"이어야 표시광고법상 문제가 없다.
+      한 번도 받을 생각이 없는 금액을 정가로 걸면 허위 표시가 된다. */
+export const PRO_PRICE = 4000;       // 실제 결제 금액 (출시 기념)
+export const PRO_LIST_PRICE = 5700;  // 정가 — 기념 종료 후 받을 금액. 화면에는 30%↓ 로 표시된다
 
 /* 주문 생성·승인에서 쓸 금액. 나중에 프로모션 코드가 생기면 여기서 갈라진다. */
 export function proAmount() {
