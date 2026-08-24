@@ -14,7 +14,7 @@
   검색되는 말을 담았다. 브랜드명을 앞에 두면 아무도 검색하지 않는 말이 제목이 된다.
 -->
 <title>한식조리기능사 필기 CBT — 기출문제·모의고사 무료</title>
-<meta name="description" content="최신 출제기준 4과목(위생관리·안전관리·재료관리·기초조리실무) 체계로 정리한 한식조리기능사 필기 문제. 기출 1,080문항과 모의고사를 문항 수 제한 없이 무료로 풀어보세요. 정답 해설, 오답노트, 즐겨찾기, 과목별 통계까지 제공합니다.">
+<meta name="description" content="한식조리기능사 필기 기출문제를 6개 단원(위생관리·안전관리·재료관리·구매관리·기초조리실무·한식조리실무)으로 나눠 정리했습니다. 기출 1,080문항과 모의고사를 문항 수 제한 없이 무료로. 정답 해설, 오답노트, 즐겨찾기, 단원별 통계 제공.">
 <link rel="canonical" href="https://cbt-app-liart.vercel.app/">
 <meta name="theme-color" content="#00421F">
 
@@ -36,7 +36,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="한식조리기능사 CBT">
 <meta property="og:title" content="한식조리기능사 필기 CBT — 기출문제·모의고사 무료">
-<meta property="og:description" content="최신 출제기준 반영 · 기출 1,080문항 무료. 문항 수 제한 없이 풀고 오답노트·과목별 통계까지.">
+<meta property="og:description" content="한식조리기능사 필기 기출 1,080문항 무료 · 6개 단원 분류. 문항 수 제한 없이 풀고 오답노트·통계까지.">
 <meta property="og:url" content="https://cbt-app-liart.vercel.app/">
 <meta property="og:image" content="https://cbt-app-liart.vercel.app/assets/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -658,6 +658,166 @@
   .note-body { display: none; padding: 0 16px 16px; }
   .note-item.open .note-body { display: block; }
   .note-body .summary-note-card { margin: 0; }
+  /* ══════════════════════════════════════════════════════════════════
+     태블릿 · PC 확장
+     ------------------------------------------------------------------
+     원칙: 모바일(~767px) CSS는 한 줄도 건드리지 않는다.
+           아래는 전부 media query 안에서만 덮어쓴다 → 롤백하려면 이 블록만 지우면 된다.
+
+     컴포넌트는 그대로 재사용하고 "배치"만 바꾼다.
+     .question-card / .option-item / .q-chip 은 모바일과 동일한 모양을 유지한다.
+
+     ⚠️ 이 블록은 반드시 스타일 블록의 맨 끝(닫는 style 태그 직전)에 둘 것.
+        앞쪽에 넣으면 뒤따르는 모바일 규칙이 우선순위가 같아 덮어써 버린다.
+
+     ⚠️ 이 주석 안에 닫는 style 태그 문자열을 절대 쓰지 말 것.
+        HTML 파서는 style 요소 안을 CSS로 해석하지 않고 원시 텍스트로 읽다가
+        그 문자열을 만나면 주석 안이든 아니든 태그를 즉시 닫아버린다.
+        → 이후 CSS 전부가 화면에 글자로 쏟아진다. (실제로 한 번 겪은 버그)
+     ══════════════════════════════════════════════════════════════════ */
+
+  /* ── 태블릿 (768~1023px) ──────────────────────────────────────────
+     아직 1단이다. 폭만 넓히고 글자·여백을 키운다.
+     세로 태블릿에서 2단으로 가면 한 칸이 너무 좁아져서 지문이 갈라진다. */
+  @media (min-width: 768px) {
+    .phone-wrap {
+      max-width: 720px;
+      box-shadow: 0 0 0 1px var(--border);
+    }
+    .exam-nav,
+    .tab-bar { max-width: 720px; }
+
+    /* 화면이 넓어진 만큼 본문 여백을 키운다 */
+    .question-card { margin: 22px 22px 0; padding: 26px; }
+    .options-list  { margin: 16px 22px 0; }
+    .question-text { font-size: 18px; }
+    .option-item   { padding: 18px; }
+
+    /* 번호 칩도 커서 클릭이 편해진다 */
+    .q-chip { flex: 0 0 40px; height: 40px; font-size: 14px; }
+
+    /* 마우스가 있는 환경이므로 hover 피드백을 준다 */
+    .option-item:hover  { border-color: var(--primary); }
+    .option-item.correct:hover,
+    .option-item.wrong:hover { border-color: currentColor; }
+    .nav-btn:hover:not(:disabled) { border-color: var(--primary); }
+  }
+
+  /* ── PC (1024px~) ────────────────────────────────────────────────
+     실제 CBT와 같은 2단 배치. 좌측 문제 / 우측 문항 번호판.
+
+     마크업은 손대지 않는다. #q-strip 은 DOM 상 .exam-header 안에 있지만
+     .exam-header 를 display:contents 로 두면 자식들이 곧바로 그리드 아이템이 되어
+     번호판만 우측 칸으로 떼어낼 수 있다. */
+  @media (min-width: 1024px) {
+    body { background: var(--bg-outer); padding: 0; }
+
+    .phone-wrap {
+      max-width: 1180px;
+      box-shadow: 0 0 40px rgba(0,0,0,.07);
+    }
+
+    /* 시험 화면만 2단. 나머지 화면은 1단을 유지한다 */
+    #screen-exam.active {
+      display: grid;
+      grid-template-columns: 1fr 272px;
+      grid-template-rows: auto 1fr auto;
+      grid-template-areas:
+        "header strip"
+        "body   strip"
+        "nav    strip";
+      min-height: 100vh;
+    }
+
+    /* 헤더 껍데기를 투명하게 만들어 자식을 직접 그리드에 올린다.
+       ⚠️ display:contents 는 .exam-header 의 background 도 같이 없앤다 —
+          그래서 딥그린을 .exam-top-row 와 .q-strip 이 각자 다시 칠한다. */
+    .exam-header { display: contents; }
+
+    .exam-top-row {
+      grid-area: header;
+      background: var(--primary);
+      color: #fff;
+      padding: 26px 28px 22px;
+      margin-bottom: 0;
+    }
+    .exam-progress .cur   { font-size: 38px; }
+    .exam-progress .total { font-size: 21px; }
+
+    /* 가로 스크롤 띠 → 세로 번호판(5열 그리드) */
+    .q-strip {
+      grid-area: strip;
+      background: var(--primary);
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      align-content: start;
+      padding: 26px 18px 28px;
+      overflow-x: hidden;
+      overflow-y: auto;
+      cursor: default;          /* 모바일의 드래그 스크롤 손모양을 끈다 */
+    }
+    .q-chip {
+      flex: none;
+      width: 100%;
+      height: 42px;
+      font-size: 14px;
+      transition: transform .1s;
+    }
+    .q-chip:hover { transform: translateY(-1px); }
+
+    .exam-body {
+      grid-area: body;
+      padding: 0 0 24px;        /* 하단 바가 fixed 가 아니게 되므로 여백을 뺀다 */
+    }
+
+    /* 하단 바를 화면 고정에서 그리드 칸 안으로 되돌린다 */
+    .exam-nav {
+      grid-area: nav;
+      position: static;
+      left: auto;
+      transform: none;
+      width: auto;
+      max-width: none;
+      padding: 16px 28px 20px;
+    }
+
+    /* 본문은 지문이 한 줄에 너무 길게 늘어지지 않도록 상한을 둔다.
+       한글은 한 줄 45~55자를 넘어가면 다음 줄을 찾기 어려워진다. */
+    .question-card,
+    .options-list { max-width: 780px; }
+    .question-card { margin: 26px 28px 0; padding: 30px; }
+    .options-list  { margin: 18px 28px 0; }
+    .question-text { font-size: 18.5px; }
+
+    .tab-bar { max-width: 1180px; }
+  }
+
+  /* ── 넓은 데스크톱 (1440px~) ──
+     칸을 더 벌리기보다 번호판만 살짝 키운다. 지문 폭은 그대로 둔다. */
+  @media (min-width: 1440px) {
+    .phone-wrap { max-width: 1320px; }
+    .tab-bar    { max-width: 1320px; }
+    #screen-exam.active { grid-template-columns: 1fr 300px; }
+  }
+
+  /* ── 키보드 조작 포커스 링 ──
+     마우스 클릭에는 안 뜨고 키보드 이동에만 뜬다. */
+  @media (min-width: 768px) {
+    .option-item:focus-visible,
+    .q-chip:focus-visible,
+    .nav-btn:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 2px;
+    }
+  }
+
+  /* 손가락이 아니라 마우스인 환경에서만 hover 를 켠다.
+     터치 태블릿에서 hover 가 눌린 채 남는 현상을 막는다. */
+  @media (hover: none) {
+    .option-item:hover { border-color: transparent; }
+    .q-chip:hover      { transform: none; }
+  }
 </style>
 </head>
 <body>
@@ -2936,6 +3096,68 @@ loadPricing()
   strip.addEventListener('click', (e) => {
     if (moved) { e.stopPropagation(); e.preventDefault(); }
   }, true);
+})();
+</script>
+<!-- ══════════════════════════════════════════════════════════════════
+     PC 키보드 조작
+     ------------------------------------------------------------------
+     실제 CBT는 마우스만 쓰지만, 키보드가 있으면 훨씬 빨리 푼다.
+     모바일에는 영향이 없다 — 물리 키보드가 없으면 이벤트 자체가 안 뜬다.
+
+     1~4  보기 선택        ← →  이전·다음 문항
+     Enter 정답 확인 / 다음  Esc  시험 종료 확인
+
+     ⚠️ </body> 바로 앞에 둘 것. 기존 함수(selectOpt, prevQ, nextQ ...)가
+        모두 정의된 뒤에 실행되어야 한다.
+     ══════════════════════════════════════════════════════════════════ -->
+<script>
+(function () {
+  // 입력 중일 땐 단축키를 꺼야 한다. 오답노트 검색창에 "3"을 치면
+  // 3번 보기가 선택되는 사고를 막는다.
+  function isTyping(el) {
+    if (!el) return false;
+    const t = el.tagName;
+    return t === 'INPUT' || t === 'TEXTAREA' || t === 'SELECT' || el.isContentEditable;
+  }
+
+  function examVisible() {
+    const s = document.getElementById('screen-exam');
+    return s && s.classList.contains('active');
+  }
+
+  // 함수가 아직 없을 수도 있으니(로드 순서·이름 변경) 있을 때만 부른다
+  function call(name, ...args) {
+    if (typeof window[name] === 'function') { window[name](...args); return true; }
+    return false;
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (!examVisible()) return;
+    if (isTyping(e.target)) return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;   // 브라우저 단축키는 그대로 둔다
+
+    const k = e.key;
+
+    // 보기 선택 — 이미 정답을 본 문항이면 selectOpt 내부에서 무시된다
+    if (k >= '1' && k <= '4') {
+      if (call('selectOpt', Number(k) - 1)) e.preventDefault();
+      return;
+    }
+
+    if (k === 'ArrowLeft')  { if (call('prevQ')) e.preventDefault(); return; }
+    if (k === 'ArrowRight') { if (call('nextQ')) e.preventDefault(); return; }
+
+    // Enter: 답을 골랐는데 아직 확인 전이면 정답 확인, 아니면 다음 문항
+    if (k === 'Enter') {
+      const checkBtn = document.querySelector('#exam-body .check-btn:not([disabled])');
+      if (checkBtn) { checkBtn.click(); }
+      else { call('nextQ'); }
+      e.preventDefault();
+      return;
+    }
+
+    if (k === 'Escape') { if (call('confirmExit')) e.preventDefault(); return; }
+  });
 })();
 </script>
 </body>
