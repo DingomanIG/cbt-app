@@ -1,7 +1,10 @@
 /* 약관·환불정책·개인정보처리방침 공용 스타일.
-   이 문서들은 앱 설정 화면에서 링크로 들어온다. 앱은 390px 폰 프레임인데
-   문서만 넓게 퍼지면 다른 사이트로 넘어온 것처럼 보이므로 폭을 앱과 맞춘다.
-   팔레트도 앱과 같은 값을 쓴다. */
+   이 문서들은 앱 설정 화면에서 링크로 들어온다. 문서만 다른 폭으로 퍼지면
+   다른 사이트로 넘어온 것처럼 보이므로 폭을 앱과 함께 움직인다.
+   팔레트도 앱과 같은 값을 쓴다.
+
+   앱(index.html)이 768px 부터 720px, 1024px 부터 1180px 로 넓어지므로
+   이 문서들도 같은 지점에서 넓어진다 — 파일 맨 아래 media query 참조. */
 
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
 
@@ -30,7 +33,8 @@ body {
 }
 
 .doc {
-  max-width: 390px;   /* index.html 의 .phone-wrap 과 같은 값 — 함께 고칠 것 */
+  max-width: 390px;   /* index.html 의 .phone-wrap 과 같은 값 — 함께 고칠 것.
+                         넓은 화면 폭은 파일 맨 아래 media query 에서 덮는다 */
   margin: 0 auto;
   background: var(--bg);
   min-height: 100vh;
@@ -85,7 +89,8 @@ body {
 .note strong { color: var(--accent-text); }
 
 /* ── 표 (수집항목·보유기간·위탁·국외이전) ──
-   본문 폭이 앱 프레임(390px)이라 어떤 화면에서도 표를 가로로 펼칠 자리가 없다.
+   좁은 화면에서는 표를 가로로 펼칠 자리가 없다.
+   (1024px 이상에서는 자리가 생기므로 파일 맨 아래에서 보통 표로 되돌린다)
    가로 스크롤로 두면 열이 잘린 채 보이고 밀 수 있다는 것도 눈에 안 띈다.
    그래서 행을 카드처럼 세로로 쌓고, 각 칸 앞에 헤더를 붙인다.
    ⚠️ 칸마다 `data-label="열 이름"` 이 있어야 한다 — 표에 행·열을 추가하면 같이 넣을 것.
@@ -143,3 +148,70 @@ table td:not([data-label])::before { display: none; }
   color: var(--text-sub);
 }
 .doc-foot a { color: var(--accent-text); margin-right: 14px; }
+
+
+/* ══════════════════════════════════════════════════════════════════
+   태블릿 · PC
+   ------------------------------------------------------------------
+   원칙은 index.html 과 같다: 모바일(~767px) 규칙은 한 줄도 건드리지 않고
+   전부 media query 안에서만 덮는다 → 롤백하려면 이 블록만 지우면 된다.
+
+   ⚠️ 반드시 파일 맨 끝에 둘 것. 위에 두면 뒤따르는 규칙이 우선순위가 같아
+      그대로 덮어써 버린다 (특히 표 규칙).
+
+   폭은 앱과 같은 지점(768 / 1024)에서 넓히되 값은 더 좁게 잡는다.
+   앱의 PC 폭은 1180px 인데, 법률 문장을 그 폭으로 흘리면 한 줄이 너무 길어
+   눈이 다음 줄을 놓친다. 읽기 좋은 한 줄 길이를 우선했다.
+   ══════════════════════════════════════════════════════════════════ */
+
+@media (min-width: 768px) {
+  .doc { max-width: 720px; }
+
+  .doc-head { padding: 34px 40px 28px; }
+  .doc-head h1 { font-size: 26px; }
+  .doc-body { padding: 32px 40px 80px; }
+
+  .doc-body h2 { font-size: 17.5px; }
+  .doc-body h3 { font-size: 15.5px; }
+  .doc-body p,
+  .doc-body ul,
+  .doc-body ol { font-size: 15.5px; }
+  .note { font-size: 15px; padding: 14px 16px; }
+}
+
+@media (min-width: 1024px) {
+  .doc { max-width: 860px; }
+
+  .doc-head { padding: 40px 56px 32px; }
+  .doc-body { padding: 38px 56px 90px; }
+
+  /* 표를 보통 표로 되돌린다.
+     모바일에서 카드처럼 쌓으려고 바꿔둔 것(행 숨김, display:block, ::before 라벨)을
+     하나도 빠짐없이 되돌려야 한다. 하나라도 남으면 칸이 어긋난다. */
+  table tr:first-child { display: table-row; }   /* 감춰둔 th 행을 다시 쓴다 */
+  table tr {
+    display: table-row;
+    background: none;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+  }
+  table th,
+  table td {
+    display: table-cell;
+    border: 1px solid var(--border);
+    padding: 10px 13px;
+    text-align: left;
+    vertical-align: top;
+  }
+  table th {
+    background: var(--neutral-bg);
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-sub);
+  }
+  table td { background: var(--card); }
+  table td + td { border-top: 1px solid var(--border); }  /* 모바일의 점선을 덮는다 */
+  table td::before { display: none; }                      /* data-label 은 th 가 대신한다 */
+}
