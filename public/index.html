@@ -658,6 +658,65 @@
   .note-body { display: none; padding: 0 16px 16px; }
   .note-item.open .note-body { display: block; }
   .note-body .summary-note-card { margin: 0; }
+  /* ── 로그인 · 회원가입 ──
+     비밀번호 칸은 반드시 form 안에 둔다. 브라우저 비밀번호 관리자는 form 밖의
+     input 을 저장·자동완성 대상으로 보지 않는다. 심사원이 캡처할 화면이라
+     자동완성이 뜨는 편이 낫다. */
+  .auth-form { display: flex; flex-direction: column; gap: 10px; }
+  .auth-input {
+    width: 100%; padding: 15px 16px;
+    border: 1.5px solid var(--border); border-radius: 14px;
+    background: var(--card); color: var(--text);
+    font-size: 15px; font-family: inherit;
+  }
+  .auth-input:focus { outline: none; border-color: var(--primary); }
+  .auth-input::placeholder { color: var(--arrow); }
+  .auth-input:disabled { background: var(--neutral-bg); color: var(--text-sub); }
+
+  .auth-submit {
+    padding: 17px; border: none; border-radius: 16px;
+    background: var(--primary); color: #fff;
+    font-size: 16px; font-weight: 800; font-family: inherit; cursor: pointer;
+  }
+  .auth-submit:disabled { background: var(--border); color: var(--text-sub); cursor: default; }
+
+  /* 색만으로 알리지 않는다 — 앞에 기호를 붙여 색을 구분 못 해도 읽히게 한다 */
+  .auth-error, .auth-notice {
+    border-radius: 12px; padding: 12px 14px;
+    font-size: 13px; font-weight: 700; line-height: 1.5;
+  }
+  .auth-error  { background: var(--wrong-bg);   color: var(--wrong-text); }
+  .auth-notice { background: var(--correct-bg); color: var(--correct-text); }
+
+  .auth-switch { text-align: center; font-size: 13px; color: var(--text-sub); padding: 6px 0 2px; }
+  .auth-switch button {
+    background: none; border: none; padding: 0 2px;
+    color: var(--accent-text); font-size: 13px; font-weight: 800;
+    font-family: inherit; cursor: pointer; text-decoration: underline;
+  }
+
+  .auth-or {
+    display: flex; align-items: center; gap: 12px;
+    margin: 18px 0 14px; color: var(--text-sub); font-size: 12px;
+  }
+  .auth-or::before, .auth-or::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .auth-social { display: flex; flex-direction: column; gap: 8px; }
+  .auth-social button {
+    padding: 15px; border: 2px solid var(--border); border-radius: 14px;
+    background: var(--card); color: var(--text);
+    font-size: 14.5px; font-weight: 700; font-family: inherit; cursor: pointer;
+  }
+  .auth-social button.kakao { background: #FEE500; border-color: #FEE500; color: #191600; }
+
+  /* 넓은 화면에서 입력칸이 1100px 넘게 늘어나면 로그인 화면으로 안 보인다.
+     ⚠️ 폭을 좁히는 대상은 #auth-body 여야 한다. 바깥 .start-body 를 줄이면
+        거기 칠해진 크림색 배경까지 같이 좁아져서 딥그린 위에 뜬 기둥이 된다.
+     모바일(~767px)은 건드리지 않는다 — 거기선 어차피 430px 아래다. */
+  @media (min-width: 768px) {
+    #auth-body { max-width: 430px; margin-left: auto; margin-right: auto; }
+  }
+
   /* ══════════════════════════════════════════════════════════════════
      태블릿 · PC 확장
      ------------------------------------------------------------------
@@ -916,6 +975,19 @@
       </div>
       <div class="start-body">
         <div id="pro-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 로그인 · 회원가입 -->
+  <div class="screen" id="screen-auth">
+    <div class="start-screen">
+      <div class="start-top">
+        <h2 id="auth-title">로그인</h2>
+        <p id="auth-sub">기록이 계정에 저장되어 다른 기기에서도 이어집니다</p>
+      </div>
+      <div class="start-body">
+        <div id="auth-body"></div>
       </div>
     </div>
   </div>
@@ -1523,8 +1595,7 @@ function renderSettings(msg) {
          <div class="a-name">이 기기에만 저장됩니다</div>
          <div class="a-msg">로그인하면 오답노트·즐겨찾기·풀이기록이 계정에 저장되어 다른 기기에서도 이어집니다.</div>
          <div class="a-actions">
-           <button class="acct-btn" data-act="signin" data-provider="google">구글 로그인</button>
-           <button class="acct-btn kakao" data-act="signin" data-provider="kakao">카카오 로그인</button>
+           <button class="acct-btn" data-act="signin-page">로그인 · 회원가입</button>
          </div>
        </div>`;
 
@@ -1782,7 +1853,8 @@ async function signIn(provider) {
     provider,
     options: { redirectTo: location.origin },
   });
-  if (error) renderSettings(`${PROVIDER_LABELS[provider]} 로그인 실패`);
+  // 소셜 버튼은 이제 로그인 화면에만 있다. 설정 화면에 써봐야 사용자가 못 본다.
+  if (error) failAuth(`${PROVIDER_LABELS[provider]} 로그인에 실패했습니다.`);
 }
 async function signOut() {
   await SB.auth.signOut();
@@ -1794,6 +1866,158 @@ async function signOut() {
   resetProContent();
   renderSettings('');
   renderInProgressCards();
+}
+
+/* ── 이메일 로그인 · 회원가입 ──
+   소셜 로그인만 있으면 남에게 넘길 수 있는 테스트 계정을 만들 수 없다.
+   토스페이먼츠 계약심사가 심사원용 ID/PW 를 요구해서 추가했다.
+
+   ⚠️ Supabase 프로젝트의 Auth → Email → "Confirm email" 이 꺼져 있어야
+      가입 즉시 세션이 생긴다. 켜져 있으면 signUp 은 성공하는데 세션이 없어
+      화면이 멈춘 것처럼 보이므로, 아래에서 session 유무를 보고 안내로 갈라진다.
+
+   로그인 성공 후의 마이그레이션·데이터 로드는 건드리지 않는다 —
+   onAuthStateChange 의 SIGNED_IN 이 소셜 로그인과 똑같이 onSignedIn 을 부른다. */
+let authMode = 'signin';          // 'signin' | 'signup'
+let authBusy = false;
+let authError = '';
+let authNotice = '';
+let authEmail = '';               // 에러로 다시 그릴 때 입력값을 잃지 않으려고 들고 있는다
+let authReturnScreen = 'screen-settings';
+
+function goToAuth(from) {
+  authReturnScreen = from || 'screen-settings';
+  authMode = 'signin';
+  authError = authNotice = authEmail = '';
+  authBusy = false;
+  renderAuthScreen();
+  goTo('screen-auth');
+}
+
+/* 로그인 화면을 떠난다. 성공·취소 양쪽에서 쓴다.
+   프로 화면으로 돌아갈 때 goToPro 를 다시 부르지 않는 이유: view_pro 가 두 번 세어져
+   전환율 지표가 망가진다. 필요한 것(다시 그리기 + 권한 재확인)만 직접 한다. */
+function leaveAuthScreen() {
+  if (authReturnScreen === 'screen-pro') {
+    renderProScreen();
+    goTo('screen-pro');
+    refreshEntitlement();
+  } else {
+    goToSettings();
+  }
+}
+
+/* Supabase 는 영문 메시지를 그대로 던진다. 사용자에게 보일 말로 바꾼다. */
+function authErrorMessage(e) {
+  const raw = (e && e.message) ? e.message : '';
+  const m = raw.toLowerCase();
+  if (m.includes('invalid login credentials'))   return '이메일 또는 비밀번호가 올바르지 않습니다.';
+  if (m.includes('email not confirmed'))         return '이메일 확인이 아직 끝나지 않았습니다. 메일의 링크를 눌러 주세요.';
+  if (m.includes('already registered'))          return '이미 가입된 이메일입니다. 로그인해 주세요.';
+  if (m.includes('password should be at least')) return '비밀번호는 6자 이상이어야 합니다.';
+  if (m.includes('invalid email') || m.includes('unable to validate email'))
+                                                 return '이메일 주소 형식이 올바르지 않습니다.';
+  if (m.includes('rate limit') || m.includes('too many'))
+                                                 return '시도가 너무 잦습니다. 잠시 후 다시 시도해 주세요.';
+  if (m.includes('signups not allowed'))         return '현재 회원가입을 받지 않고 있습니다.';
+  return raw || '처리하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+}
+
+function renderAuthScreen() {
+  const signup = authMode === 'signup';
+  const title = document.getElementById('auth-title');
+  const sub = document.getElementById('auth-sub');
+  if (title) title.textContent = signup ? '회원가입' : '로그인';
+  if (sub) sub.textContent = signup
+    ? '이메일과 비밀번호만 있으면 됩니다'
+    : '기록이 계정에 저장되어 다른 기기에서도 이어집니다';
+
+  const el = document.getElementById('auth-body');
+  if (!el) return;
+  el.innerHTML = `
+    <div class="setting-section">
+      <form class="auth-form" id="auth-form" novalidate>
+        ${authError  ? `<div class="auth-error">⚠️ ${esc(authError)}</div>` : ''}
+        ${authNotice ? `<div class="auth-notice">✉️ ${esc(authNotice)}</div>` : ''}
+        <input class="auth-input" id="auth-email" type="email" name="email"
+               inputmode="email" autocomplete="email" autocapitalize="none" spellcheck="false"
+               placeholder="이메일" value="${esc(authEmail)}">
+        <input class="auth-input" id="auth-password" type="password" name="password"
+               autocomplete="${signup ? 'new-password' : 'current-password'}"
+               placeholder="${signup ? '비밀번호 (6자 이상)' : '비밀번호'}">
+        <button class="auth-submit" type="submit">${signup ? '가입하고 시작하기' : '로그인'}</button>
+      </form>
+      <div class="auth-switch">
+        ${signup ? '이미 계정이 있으신가요?' : '계정이 없으신가요?'}
+        <button type="button" data-act="auth-toggle">${signup ? '로그인' : '회원가입'}</button>
+      </div>
+      <div class="auth-or">또는</div>
+      <div class="auth-social">
+        <button type="button" data-act="signin" data-provider="google">구글로 계속하기</button>
+        <button type="button" class="kakao" data-act="signin" data-provider="kakao">카카오로 계속하기</button>
+      </div>
+    </div>
+    <div class="settings-hint">
+      가입하면 <a href="/terms.html">이용약관</a>과 <a href="/privacy.html">개인정보처리방침</a>에 동의하는 것으로 봅니다.
+    </div>
+    <div class="bottom-actions">
+      <button class="btn-back" data-act="auth-back">←</button>
+    </div>`;
+}
+
+/* 통신 중에는 화면을 다시 그리지 않고 DOM 만 잠근다.
+   다시 그리면 입력해 둔 비밀번호가 날아간다. */
+function setAuthBusy(on) {
+  authBusy = on;
+  const form = document.getElementById('auth-form');
+  if (!form) return;
+  form.querySelectorAll('input, button').forEach(n => { n.disabled = on; });
+  const btn = form.querySelector('.auth-submit');
+  if (btn) btn.textContent = on
+    ? '처리 중…'
+    : (authMode === 'signup' ? '가입하고 시작하기' : '로그인');
+}
+
+function failAuth(message) {
+  authError = message;
+  authNotice = '';
+  setAuthBusy(false);
+  renderAuthScreen();
+}
+
+async function submitAuth() {
+  if (authBusy) return;
+  const email = (document.getElementById('auth-email').value || '').trim();
+  const password = document.getElementById('auth-password').value || '';
+  authEmail = email;
+
+  if (!email || !password) return failAuth('이메일과 비밀번호를 모두 입력해 주세요.');
+  if (authMode === 'signup' && password.length < 6) return failAuth('비밀번호는 6자 이상이어야 합니다.');
+
+  setAuthBusy(true);
+  try {
+    if (authMode === 'signup') {
+      const { data, error } = await SB.auth.signUp({ email, password });
+      if (error) throw error;
+      // Confirm email 이 켜져 있으면 여기서 세션이 없다. 가입은 됐으니 로그인 쪽으로 돌려보낸다.
+      if (!data.session) {
+        authMode = 'signin';
+        authError = '';
+        authNotice = '확인 메일을 보냈습니다. 메일의 링크를 누른 뒤 로그인해 주세요.';
+        setAuthBusy(false);
+        renderAuthScreen();
+        return;
+      }
+    } else {
+      const { error } = await SB.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+    authError = authNotice = authEmail = '';
+    setAuthBusy(false);
+    leaveAuthScreen();
+  } catch (e) {
+    failAuth(authErrorMessage(e));
+  }
 }
 
 async function onSignedIn(user) {
@@ -1816,6 +2040,8 @@ async function onSignedIn(user) {
     ? `${result.moved}건 이동, ${result.kept}건은 다음에 다시 시도합니다`
     : (result.moved > 0 ? `${result.moved}건을 계정으로 옮겼습니다` : '');
   renderSettings(msg);
+  // 프로 화면을 열어둔 채 로그인했다면 CTA가 "로그인하고 업그레이드"에 멈춰 있다
+  if (document.getElementById('screen-pro').classList.contains('active')) renderProScreen();
 }
 
 async function initAuth() {
@@ -2166,6 +2392,7 @@ const TAB_BY_SCREEN = {
   'screen-results': 'results',
   'screen-settings': 'settings',
   'screen-pro': 'settings',
+  'screen-auth': 'settings',
 };
 /* 시험 화면의 하단은 .exam-nav가 이미 쓴다. 온보딩·로딩 중엔 이동시키지 않는다 */
 const TABBAR_HIDDEN = ['screen-onboarding', 'screen-exam', 'screen-loading'];
@@ -3009,14 +3236,31 @@ delegate('tab-bar',         '.tab-item', el => {
 });
 delegate('settings-body', '[data-act]', el => {
   const act = el.dataset.act;
-  if (act === 'signin') signIn(el.dataset.provider);
+  if (act === 'signin-page') goToAuth('screen-settings');
   else if (act === 'signout') signOut();
   else if (act === 'pro') goToPro('screen-settings');
   else if (act === 'reset') resetStudyData();
 });
+delegate('auth-body', '[data-act]', el => {
+  const act = el.dataset.act;
+  if (act === 'signin') signIn(el.dataset.provider);
+  else if (act === 'auth-back') leaveAuthScreen();
+  else if (act === 'auth-toggle') {
+    authMode = authMode === 'signup' ? 'signin' : 'signup';
+    authError = authNotice = '';
+    renderAuthScreen();
+  }
+});
+/* delegate 는 click 만 듣는다. Enter 제출과 비밀번호 관리자의 자동 제출은
+   submit 이벤트로 오므로 따로 받는다. */
+document.getElementById('auth-body').addEventListener('submit', e => {
+  if (!e.target.closest('#auth-form')) return;
+  e.preventDefault();
+  submitAuth();
+});
 delegate('pro-body', '[data-act]', el => {
   const act = el.dataset.act;
-  if (act === 'signin-pro') signIn('google');
+  if (act === 'signin-pro') goToAuth('screen-pro');
   else if (act === 'checkout') startCheckout();
   else if (act === 'back') {
     if (proReturnScreen === 'screen-settings') goToSettings();
