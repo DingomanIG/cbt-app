@@ -1475,7 +1475,7 @@ const BIZ = {
   사업자등록번호: '223-32-01942',
   통신판매업: '제2026-충북옥천-0072호',
   주소: '충청북도 옥천군 옥천읍 동부로 140-23, 101동 307호(옥천그린빌)',
-  전화: '',                       // TODO: 0505/070 번호 발급 후 채울 것 (토스 요구 항목)
+  전화: '010-8823-5228',          // 토스 필수 항목. 하단 사업자정보에 공개 노출된다
   이메일: 'bonekatana@gmail.com',
 };
 
@@ -1659,7 +1659,7 @@ function renderProScreen() {
   el.innerHTML = `
     <div class="setting-section">
       <div class="pro-hero">
-        <div class="p-kicker">출시 기념 할인 · 추가 결제 없이 평생 이용</div>
+        <div class="p-kicker">출시 기념 할인 · 1회 결제로 12개월 이용</div>
         <div class="p-head">프로 버전으로 업그레이드</div>
         <div class="p-price">${priceHtml}</div>
       </div>
@@ -1686,7 +1686,8 @@ function renderProScreen() {
       </div>
       <div class="settings-hint">문제풀이, 정답 확인, 오답노트, 즐겨찾기, 풀이결과 통계는 무료로 계속 쓸 수 있습니다.</div>
       <div class="settings-hint">
-        추가 결제 없이 계속 이용하는 1회 결제이며, 자동으로 갱신되지 않습니다.
+        <strong>이용기간: 결제일로부터 12개월</strong> · 1회 결제이며 자동으로 갱신되지 않습니다.
+        기간이 끝나면 별도 절차 없이 무료 버전으로 전환됩니다.<br>
         결제 후 프로 전용 해설·요약노트를 열람하면 청약철회가 제한될 수 있습니다.<br>
         <strong>만 19세 미만이신 경우 결제 전에 법정대리인(보호자)의 동의가 필요합니다.</strong>
         동의 없이 결제하신 경우 본인 또는 보호자가 취소하실 수 있습니다.

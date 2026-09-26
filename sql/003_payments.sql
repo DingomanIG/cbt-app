@@ -103,13 +103,25 @@ begin
          updated_at  = now()
    where order_id = p_order_id;
 
-  -- 평생 이용이므로 expires_at 은 null 이다
+  -- 12개월 단건 상품이다. expires_at 이 만료 시점이고, 읽는 쪽(api/_entitlement.js,
+  -- index.html 의 프로 판정)이 이 값을 지났는지로 프로 여부를 가린다.
+  --
+  -- ⚠️ expires_at = null 은 "평생"을 뜻한다(002_entitlements.sql). 수동으로 평생 권한을
+  --    받은 사람이 결제까지 하면 12개월로 깎이는 셈이 되므로, 그 경우만 null 을 유지한다.
+  --
+  -- 아직 기간이 남아 있으면 남은 기간 뒤에 12개월을 붙인다 (재구매 = 연장).
+  -- greatest() 는 null 을 무시하므로, 만료일이 없던 비활성 행은 now() 기준으로 잡힌다.
   insert into public.user_entitlements (user_id, is_pro, granted_at, expires_at, source, note)
-  values (v_user_id, true, now(), null, 'toss', p_order_id)
+  values (v_user_id, true, now(), now() + interval '12 months', 'toss', p_order_id)
   on conflict (user_id) do update
      set is_pro     = true,
          granted_at = now(),
-         expires_at = null,
+         expires_at = case
+                        when user_entitlements.is_pro
+                         and user_entitlements.expires_at is null
+                          then null
+                        else greatest(user_entitlements.expires_at, now()) + interval '12 months'
+                      end,
          source     = 'toss',
          note       = p_order_id;
 end;
