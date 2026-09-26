@@ -1551,7 +1551,11 @@ const BIZ = {
   이메일: 'bonekatana@gmail.com',
 };
 
-function bizInfoHtml() {
+/* open=true 면 처음부터 펼쳐진 채로 그린다.
+   홈 화면은 펼침, 설정 화면은 접힘이다 — 토스 계약심사 가이드(7페이지)의 하단정보 예시가
+   접힘 없이 그대로 노출된 형태이고, 심사원이 홈을 먼저 보기 때문이다.
+   설정에서까지 펼치면 계정·데이터 항목이 밀려나므로 거기는 그대로 둔다. */
+function bizInfoHtml(open) {
   const rows = [
     ['상호', BIZ.상호],
     ['대표자', BIZ.대표자],
@@ -1564,7 +1568,7 @@ function bizInfoHtml() {
   ];
   return `
     <div class="setting-section">
-      <details class="biz">
+      <details class="biz"${open ? ' open' : ''}>
         <summary>사업자 정보<span class="s-right">›</span></summary>
         <dl>
           ${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('')}
@@ -3291,7 +3295,7 @@ delegate('summary-notes-body', '.note-head', el => {
 });
 
 initAnalytics();
-document.getElementById('home-biz').innerHTML = bizInfoHtml();
+document.getElementById('home-biz').innerHTML = bizInfoHtml(true);
 renderTabBar();
 syncTabBar('screen-home'); // 첫 화면은 HTML에서 이미 active다
 syncHomeProBadge();        // 권한 조회 전에는 무료로 본다
