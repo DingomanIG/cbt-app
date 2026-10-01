@@ -8,4 +8,4 @@ Allow: /
 Disallow: /admin.html
 Disallow: /api/
 
-Sitemap: https://cbtnote.kr/sitemap.xml
+Sitemap: https://hansik.cbtnote.kr/sitemap.xml
