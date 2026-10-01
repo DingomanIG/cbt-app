@@ -8,4 +8,4 @@ Allow: /
 Disallow: /admin.html
 Disallow: /api/
 
-Sitemap: https://cbt-app-liart.vercel.app/sitemap.xml
+Sitemap: https://hansik.cbtnote.kr/sitemap.xml

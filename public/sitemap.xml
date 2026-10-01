@@ -8,25 +8,25 @@
 -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://cbt-app-liart.vercel.app/</loc>
+    <loc>https://hansik.cbtnote.kr/</loc>
     <lastmod>2026-08-10</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://cbt-app-liart.vercel.app/terms.html</loc>
+    <loc>https://hansik.cbtnote.kr/terms.html</loc>
     <lastmod>2026-08-10</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://cbt-app-liart.vercel.app/refund.html</loc>
+    <loc>https://hansik.cbtnote.kr/refund.html</loc>
     <lastmod>2026-08-10</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
-    <loc>https://cbt-app-liart.vercel.app/privacy.html</loc>
+    <loc>https://hansik.cbtnote.kr/privacy.html</loc>
     <lastmod>2026-08-10</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
